@@ -871,13 +871,118 @@ flex:0 0 auto;
       text-overflow:ellipsis;
     }
 
+    /* LOGIN SCREEN */
+    .login-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .login-box {
+      background: var(--panel);
+      padding: 32px;
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
+      width: 100%;
+      max-width: 340px;
+    }
+    .login-box h2 {
+      margin: 0 0 20px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .login-box input {
+      width: 100%;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 13px;
+      font-family: var(--sans);
+      background: var(--panel2);
+      color: var(--text);
+      box-sizing: border-box;
+    }
+    .login-box input:focus {
+      outline: none;
+      border-color: rgba(37,99,235,.30);
+      background: var(--panel);
+      box-shadow: 0 0 0 2px rgba(37,99,235,.10);
+    }
+    .login-box input::placeholder {
+      color: var(--muted);
+    }
+    .login-box button {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      box-shadow: 0 1px 0 rgba(17,24,39,.03);
+    }
+    .login-box button:hover {
+      background: var(--panel2);
+    }
+    .login-box button:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+    .login-error {
+      color: var(--x-red);
+      font-size: 12px;
+      margin-top: 12px;
+      text-align: center;
+    }
+    .logout-btn {
+      background: transparent;
+      border: 1px solid var(--line);
+      padding: 5px 10px;
+      border-radius: 10px;
+      font-size: 11px;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .logout-btn:hover {
+      background: var(--panel2);
+      color: var(--text);
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
 </style>
 </head>
 
 <body>
-  <div class="app">
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-box">
+      <h2>🔐 Bejelentkezés</h2>
+      <form id="loginForm">
+        <input type="email" id="loginEmail" placeholder="Email" required autocomplete="email" />
+        <input type="password" id="loginPassword" placeholder="Jelszó" required autocomplete="current-password" />
+        <button type="submit" id="loginBtn">Bejelentkezés</button>
+        <div id="loginError" class="login-error"></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="app" id="mainApp" style="display:none;">
     <header>
       <div class="header-title">ToDo 2026</div>
+      <button id="logoutBtn" class="logout-btn">Kijelentkezés</button>
     </header>
 
     <div class="toolbar">
@@ -1029,7 +1134,73 @@ flex:0 0 auto;
   // === SUPABASE CONFIG ===
   const SUPABASE_URL = 'https://jkgtnngehhkmatevsymo.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprZ3RubmdlaGhrbWF0ZXZzeW1vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNTA0NjMsImV4cCI6MjA4NTYyNjQ2M30.o6DbiL5ZN0CD-Obuftk_08Ii4t0uYWMqkJg5h5lt_vI';
-  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      storageKey: 'todo-auth',
+      autoRefreshToken: true,
+      detectSessionInUrl: false
+    }
+  });
+
+  // === AUTH ===
+  const loginScreen = document.getElementById('loginScreen');
+  const mainApp = document.getElementById('mainApp');
+  const loginForm = document.getElementById('loginForm');
+  const loginEmail = document.getElementById('loginEmail');
+  const loginPassword = document.getElementById('loginPassword');
+  const loginBtn = document.getElementById('loginBtn');
+  const loginError = document.getElementById('loginError');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  function showLogin() {
+    loginScreen.style.display = 'flex';
+    mainApp.style.display = 'none';
+  }
+
+  function showApp() {
+    loginScreen.style.display = 'none';
+    mainApp.style.display = 'block';
+  }
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Bejelentkezés...';
+    loginError.textContent = '';
+
+    const { data, error } = await db.auth.signInWithPassword({
+      email: loginEmail.value,
+      password: loginPassword.value
+    });
+
+    if (error) {
+      loginError.textContent = 'Hibás email vagy jelszó';
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Bejelentkezés';
+      return;
+    }
+
+    showApp();
+    startApp();
+  });
+
+  logoutBtn.addEventListener('click', async () => {
+    await db.auth.signOut();
+    showLogin();
+    rows = [];
+  });
+
+  // Check if already logged in
+  (async function checkAuth() {
+    const { data: { session } } = await db.auth.getSession();
+    if (session) {
+      showApp();
+      startApp();
+    } else {
+      showLogin();
+    }
+  })();
 
   const nowIso = () => new Date().toISOString().slice(0,19).replace('T',' ');
   const uid = () => (crypto?.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)+Date.now());
@@ -2353,21 +2524,20 @@ tr.addEventListener('dblclick', (e)=>{
   closeModal.addEventListener('click', closeModalFn);
   overlay.addEventListener('click', closeModalFn);
 
-  // === ASYNC INDÍTÁS ===
-  (async function init() {
+  // === APP INDÍTÁS (auth után hívódik) ===
+  async function startApp() {
     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:40px;color:#6b7280;">Betöltés...</td></tr>';
     
     const loaded = await loadRowsFromSupabase();
     if (loaded && loaded.length) {
       rows = loaded;
     } else {
-      // Fallback: ha nincs adat Supabase-ben, sample adatok
-      rows = sampleRows();
+      rows = [];
     }
     
     populateYearFilter();
     render();
-  })();
+  }
 </script>
 </body>
 </html>
