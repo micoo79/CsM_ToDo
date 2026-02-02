@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Aláírás felület</title>
+  <style>
+    :root { --bg:#0b0f17; --card:#121a28; --text:#e8eefc; --muted:#a9b6d3; --btn:#1f2b44; --btn2:#2a3a5e; --danger:#7a1f2b; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, #070a10, var(--bg));
+      color: var(--text);
+      min-height: 100svh;
+      padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+      display: flex; align-items: center; justify-content: center;
+    }
+    .wrap { width: min(980px, 100%); }
+    .card {
+      background: rgba(18,26,40,.92);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+    }
+    header { padding: 16px 16px 10px; }
+    h1 { margin: 0; font-size: 18px; font-weight: 700; }
+    p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.35; }
+    .pad {
+      background: #fff;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      touch-action: none; /* fontos: ne görgessen/zoomoljon rajzolás közben */
+      display: block;
+    }
+    @media (max-width: 560px) {
+      .pad { aspect-ratio: 4 / 3; }
+    }
+    .bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 10px;
+      padding: 12px 16px 16px;
+      background: rgba(255,255,255,.02);
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    button {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,.10);
+      background: var(--btn);
+      color: var(--text);
+      padding: 12px 12px;
+      border-radius: 12px;
+      font-weight: 650;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform .06s ease, background .15s ease;
+      user-select: none;
+    }
+    button:active { transform: scale(.98); }
+    button.secondary { background: var(--btn2); }
+    button.danger { background: var(--danger); }
+    .note {
+      padding: 0 16px 16px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .row {
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      padding: 0 16px 16px;
+    }
+    .chip {
+      font-size: 12px; color: var(--muted);
+      border: 1px dashed rgba(255,255,255,.18);
+      padding: 8px 10px; border-radius: 999px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <header>
+        <h1>Aláírás</h1>
+        <p>Ujjal rajzolj a fehér felületen. A “Mentés” letölti PNG képként.</p>
+      </header>
+
+      <canvas id="canvas" class="pad"></canvas>
+
+      <div class="row">
+        <span class="chip" id="status">Vonalvastagság: 3px • Szín: fekete</span>
+      </div>
+
+      <div class="bar">
+        <button class="secondary" id="undo">Visszavonás</button>
+        <button class="danger" id="clear">Törlés</button>
+        <button class="secondary" id="fit">Illesztés</button>
+        <button id="save">Mentés (PNG)</button>
+      </div>
+
+      <div class="note">
+        Tipp: ha az oldal görgetne rajzolás közben, ellenőrizd, hogy a canvas-on a <code>touch-action: none</code> aktív.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    const undoBtn = document.getElementById('undo');
+    const clearBtn = document.getElementById('clear');
+    const saveBtn = document.getElementById('save');
+    const fitBtn  = document.getElementById('fit');
+
+    let drawing = false;
+    let last = null;
+    let history = [];
+
+    const PEN = {
+      color: '#000000',
+      width: 3,
+      cap: 'round',
+      join: 'round'
+    };
+
+    function setupCanvasSize() {
+      // CSS méret → valódi pixel méret (retina)
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+      // Mentsük az aktuális képet resize előtt
+      const prev = canvas.width ? canvas.toDataURL('image/png') : null;
+
+      canvas.width  = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+
+      // Rajzolási koordinátákhoz skála
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // Alap stílus
+      ctx.lineCap = PEN.cap;
+      ctx.lineJoin = PEN.join;
+      ctx.strokeStyle = PEN.color;
+      ctx.lineWidth = PEN.width;
+
+      // Fehér háttér (hogy a PNG ne legyen átlátszó)
+      ctx.save();
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      // Ha volt előző kép, töltsük vissza
+      if (prev) {
+        const img = new Image();
+        img.onload = () => {
+          // dpr miatt pixel koordinátákban rajzolunk
+          ctx.save();
+          ctx.setTransform(1,0,0,1,0,0);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          ctx.restore();
+        };
+        img.src = prev;
+      }
+
+      pushHistory(); // reset history alapra
+    }
+
+    function pushHistory() {
+      // limitáljuk a history-t
+      try {
+        const url = canvas.toDataURL('image/png');
+        history.push(url);
+        if (history.length > 30) history.shift();
+      } catch (e) {
+        // iOS Safari néha dobhat memory hibát óriás canvasnál
+        console.warn('History mentés sikertelen:', e);
+      }
+    }
+
+    function restoreFrom(url) {
+      const img = new Image();
+      img.onload = () => {
+        // teljes canvas újrarajzolás
+        ctx.save();
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      };
+      img.src = url;
+    }
+
+    function getPoint(e) {
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches ? e.touches[0] : null;
+      const clientX = touch ? touch.clientX : e.clientX;
+      const clientY = touch ? touch.clientY : e.clientY;
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      };
+    }
+
+    function start(e) {
+      e.preventDefault();
+      drawing = true;
+      last = getPoint(e);
+      ctx.beginPath();
+      ctx.moveTo(last.x, last.y);
+    }
+
+    function move(e) {
+      if (!drawing) return;
+      e.preventDefault();
+      const p = getPoint(e);
+
+      ctx.strokeStyle = PEN.color;
+      ctx.lineWidth = PEN.width;
+
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+
+      last = p;
+    }
+
+    function end(e) {
+      if (!drawing) return;
+      e.preventDefault();
+      drawing = false;
+      ctx.closePath();
+      pushHistory();
+    }
+
+    // Pointer Events (modern) + fallback touch/mouse
+    if (window.PointerEvent) {
+      canvas.addEventListener('pointerdown', start, { passive: false });
+      canvas.addEventListener('pointermove', move, { passive: false });
+      window.addEventListener('pointerup', end, { passive: false });
+      window.addEventListener('pointercancel', end, { passive: false });
+    } else {
+      canvas.addEventListener('mousedown', start);
+      canvas.addEventListener('mousemove', move);
+      window.addEventListener('mouseup', end);
+
+      canvas.addEventListener('touchstart', start, { passive: false });
+      canvas.addEventListener('touchmove', move, { passive: false });
+      window.addEventListener('touchend', end, { passive: false });
+      window.addEventListener('touchcancel', end, { passive: false });
+    }
+
+    undoBtn.addEventListener('click', () => {
+      if (history.length <= 1) return;
+      history.pop();
+      restoreFrom(history[history.length - 1]);
+    });
+
+    clearBtn.addEventListener('click', () => {
+      // fehér háttér
+      ctx.save();
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+      pushHistory();
+    });
+
+    fitBtn.addEventListener('click', () => {
+      setupCanvasSize();
+    });
+
+    saveBtn.addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.download = `alairas_${new Date().toISOString().slice(0,10)}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+
+    // Init
+    setupCanvasSize();
+    window.addEventListener('resize', () => {
+      // resize-nál megtartjuk a képet
+      setupCanvasSize();
+    }, { passive: true });
+  </script>
+</body>
+</html>
