@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>ToDo 2026 – v2</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1117;
+      --bg2: #161821;
+      --surface: #1e2030;
+      --surface2: #252839;
+      --surface3: #2e3148;
+      --border: rgba(255,255,255,.08);
+      --border2: rgba(255,255,255,.12);
+      --text: #e2e4ed;
+      --text2: #9498b3;
+      --text3: #626580;
+      --accent: #6c7bf7;
+      --accent2: #8b97ff;
+      --accent-bg: rgba(108,123,247,.12);
+      --accent-border: rgba(108,123,247,.25);
+      --green: #3dd68c;
+      --green-bg: rgba(61,214,140,.12);
+      --green-border: rgba(61,214,140,.25);
+      --yellow: #f0c746;
+      --yellow-bg: rgba(240,199,70,.12);
+      --yellow-border: rgba(240,199,70,.25);
+      --red: #f06292;
+      --red-bg: rgba(240,98,146,.12);
+      --red-border: rgba(240,98,146,.25);
+      --blue: #42a5f5;
+      --blue-bg: rgba(66,165,245,.12);
+      --blue-border: rgba(66,165,245,.25);
+      --orange: #ffa726;
+      --orange-bg: rgba(255,167,38,.15);
+      --r: 12px;
+      --r2: 16px;
+      --sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --anim: .4s;
+      --shadow: 0 4px 24px rgba(0,0,0,.3);
+      --shadow2: 0 16px 48px rgba(0,0,0,.5);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* === SCROLLBAR === */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+    /* === LOGIN === */
+    .login-screen {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999;
+    }
+    .login-box {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--r2);
+      padding: 40px 32px;
+      width: 100%; max-width: 380px;
+      box-shadow: var(--shadow2);
+    }
+    .login-box h2 {
+      font-size: 20px; font-weight: 700;
+      text-align: center; margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .login-box .login-sub {
+      text-align: center; color: var(--text2); font-size: 13px; margin-bottom: 24px;
+    }
+    .login-box input {
+      width: 100%; padding: 12px 14px; margin-bottom: 12px;
+      background: var(--bg); border: 1px solid var(--border2); border-radius: var(--r);
+      color: var(--text); font-size: 14px; font-family: var(--sans);
+      outline: none; transition: border-color .2s;
+    }
+    .login-box input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-bg);
+    }
+    .login-box input::placeholder { color: var(--text3); }
+    .login-box button {
+      width: 100%; padding: 12px; margin-top: 4px;
+      background: linear-gradient(135deg, var(--accent), #5a6ae6);
+      border: none; border-radius: var(--r);
+      color: #fff; font-size: 14px; font-weight: 600; font-family: var(--sans);
+      cursor: pointer; transition: opacity .2s, transform .1s;
+    }
+    .login-box button:hover { opacity: .9; }
+    .login-box button:active { transform: scale(.98); }
+    .login-box button:disabled { opacity: .5; cursor: wait; }
+    .login-error { color: var(--red); font-size: 13px; margin-top: 12px; text-align: center; }
+
+    /* === LAYOUT === */
+    .app { display: none; height: 100vh; display: flex; flex-direction: column; }
+    .app[data-visible="1"] { display: flex; }
+
+    /* Top bar */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      z-index: 50;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 16px; }
+    .topbar-brand {
+      font-size: 16px; font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+    /* KPI pills */
+    .kpi-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+    .kpi-pill {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 99px;
+      font-size: 12px; font-weight: 500;
+      background: var(--surface); border: 1px solid var(--border);
+    }
+    .kpi-pill .kpi-dot {
+      width: 6px; height: 6px; border-radius: 99px;
+    }
+    .kpi-pill .kpi-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .kpi-pill.open .kpi-dot { background: var(--yellow); }
+    .kpi-pill.fee .kpi-dot { background: var(--green); }
+    .kpi-pill.cost .kpi-dot { background: var(--red); }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 7px 12px; border-radius: var(--r);
+      font-size: 13px; font-weight: 500; font-family: var(--sans);
+      background: var(--surface); border: 1px solid var(--border2);
+      color: var(--text); cursor: pointer;
+      transition: background .15s, border-color .15s, transform .1s;
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--surface2); border-color: var(--border2); }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+    .btn svg { width: 16px; height: 16px; }
+    .btn-icon { padding: 7px; min-width: 34px; }
+    .btn-accent { background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent2); }
+    .btn-accent:hover { background: rgba(108,123,247,.2); }
+    .btn-danger { background: var(--red-bg); border-color: rgba(240,98,146,.2); color: var(--red); }
+    .btn-danger:hover { background: rgba(240,98,146,.2); }
+    .btn-logout { background: transparent; border-color: var(--border); color: var(--text2); font-size: 12px; padding: 5px 10px; }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 10px 20px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .toolbar-actions { display: flex; gap: 6px; }
+    .toolbar-spacer { flex: 1; }
+    .toolbar-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .filter-group {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 10px; border-radius: var(--r);
+      background: var(--surface); border: 1px solid var(--border);
+    }
+    .filter-group label { font-size: 11px; color: var(--text3); white-space: nowrap; text-transform: uppercase; letter-spacing: .5px; }
+    .filter-group input, .filter-group select {
+      background: transparent; border: none; outline: none;
+      color: var(--text); font-size: 13px; font-family: var(--sans);
+    }
+    .filter-group input { min-width: 180px; }
+    .filter-group select { min-width: 70px; cursor: pointer; }
+    .filter-group select option { background: var(--surface); color: var(--text); }
+    .filter-group input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+    .count-label { font-size: 12px; color: var(--text3); font-variant-numeric: tabular-nums; }
+
+    /* === MAIN CONTENT === */
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px 80px;
+    }
+
+    /* === JOB CARDS === */
+    .job-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .job-card {
+      display: grid;
+      grid-template-columns: minmax(180px, 280px) 1fr auto;
+      gap: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+      transition: border-color .2s, background .2s, opacity var(--anim), transform var(--anim);
+      cursor: pointer;
+      position: relative;
+    }
+    .job-card:hover { border-color: var(--border2); background: var(--surface2); }
+    .job-card[data-selected="1"] { border-color: var(--accent-border); box-shadow: 0 0 0 1px var(--accent-border); }
+    .job-card.fullrow { border-color: var(--green-border); background: var(--green-bg); }
+    .job-card.fullrow:hover { background: rgba(61,214,140,.18); }
+    .job-card.parkrow { border-color: var(--border); background: rgba(255,255,255,.03); }
+    .job-card.parkrow:hover { background: rgba(255,255,255,.05); }
+
+    /* Hiding animation */
+    .job-card.hiding { opacity: 0; transform: translateX(-20px); pointer-events: none; }
+
+    /* Left section: name + fee */
+    .job-left {
+      padding: 12px 16px;
+      display: flex; flex-direction: column; justify-content: center; gap: 4px;
+      border-right: 1px solid var(--border);
+      min-width: 0;
+    }
+    .job-name-input {
+      background: transparent; border: 1px solid transparent;
+      color: var(--text); font-size: 14px; font-weight: 600; font-family: var(--sans);
+      padding: 4px 6px; border-radius: 8px; outline: none;
+      width: 100%; min-width: 0;
+      transition: border-color .2s, background .2s;
+    }
+    .job-name-input:focus { border-color: var(--accent-border); background: var(--bg); }
+    .job-name-input::placeholder { color: var(--text3); }
+    .job-fee-input {
+      background: transparent; border: 1px solid transparent;
+      color: var(--text2); font-size: 12px; font-family: var(--mono);
+      padding: 2px 6px; border-radius: 6px; outline: none;
+      width: 80px; text-align: left;
+      font-variant-numeric: tabular-nums;
+      transition: border-color .2s, background .2s;
+    }
+    .job-fee-input:focus { border-color: var(--accent-border); background: var(--bg); color: var(--text); }
+    .job-fee-input::placeholder { color: var(--text3); }
+
+    /* Middle: pipeline cards */
+    .job-middle {
+      padding: 8px 12px;
+      display: flex; align-items: center; gap: 6px;
+      overflow: hidden;
+      transition: max-height var(--anim), opacity var(--anim);
+    }
+    .job-card.collapsed .job-middle {
+      max-height: 0; opacity: 0; padding: 0 12px; pointer-events: none;
+    }
+    .job-card:not(.collapsed) .job-middle {
+      max-height: 200px; opacity: 1;
+    }
+
+    /* Right: FULL/Parkoló controls */
+    .job-right {
+      padding: 8px 12px;
+      display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 6px;
+      border-left: 1px solid var(--border);
+      min-width: 140px;
+    }
+
+    /* Pipeline cards */
+    .pipe-group {
+      display: flex; gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .pipe-card {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      cursor: pointer; user-select: none;
+      min-width: 68px;
+      transition: background .15s, border-color .15s, transform .1s;
+    }
+    .pipe-card:hover { border-color: var(--border2); }
+    .pipe-card:active { transform: scale(.95); }
+    .pipe-card.done {
+      color: #fff; border-color: transparent;
+    }
+    .pipe-card.done:hover { opacity: .9; }
+
+    .pipe-icon {
+      width: 20px; height: 20px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .pipe-list { display: flex; flex-direction: column; gap: 1px; width: 100%; }
+    .pipe-item {
+      font-size: 10px; line-height: 1.2;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .pipe-item.active { font-weight: 700; color: var(--text); }
+    .pipe-item.pending { color: var(--text3); }
+    .pipe-card.done .pipe-item { color: rgba(255,255,255,.85); }
+    .pipe-card.done .pipe-item.active { color: #fff; }
+
+    /* Flag checkboxes */
+    .flag-check {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 500;
+      cursor: pointer; user-select: none;
+      padding: 4px 8px; border-radius: 8px;
+      transition: background .15s;
+    }
+    .flag-check:hover { background: var(--surface3); }
+    .flag-check input { width: 16px; height: 16px; margin: 0; cursor: pointer; }
+    .flag-check.full-flag input { accent-color: var(--green); }
+    .flag-check.park-flag input { accent-color: var(--blue); }
+    .flag-check.full-flag { color: var(--green); }
+    .flag-check.park-flag { color: var(--blue); }
+    .flag-check.gone { display: none; }
+
+    /* Hide button */
+    .hide-wrap {
+      display: flex; align-items: center; gap: 6px;
+      opacity: 0; max-height: 0; overflow: hidden; pointer-events: none;
+      transition: opacity var(--anim), max-height var(--anim);
+    }
+    .hide-wrap.visible { opacity: 1; max-height: 40px; pointer-events: auto; }
+    .hide-btn {
+      font-size: 11px; padding: 4px 8px;
+      background: transparent; border: 1px solid var(--border2);
+      color: var(--text3); border-radius: 8px; cursor: pointer;
+      transition: color .15s, border-color .15s;
+    }
+    .hide-btn:hover { color: var(--red); border-color: rgba(240,98,146,.3); }
+    .hide-confirm {
+      display: flex; align-items: center; gap: 4px;
+      max-width: 0; opacity: 0; overflow: hidden;
+      transition: max-width var(--anim), opacity var(--anim);
+    }
+    .hide-confirm.open { max-width: 200px; opacity: 1; }
+    .hide-confirm span { font-size: 11px; color: var(--text3); white-space: nowrap; }
+    .hide-confirm button {
+      font-size: 11px; padding: 3px 8px;
+      background: transparent; border: 1px solid var(--border2);
+      color: var(--text); border-radius: 6px; cursor: pointer; font-family: var(--sans);
+    }
+    .hide-confirm .yes-btn { color: var(--red); border-color: rgba(240,98,146,.3); }
+    .hide-confirm .yes-btn:hover { background: var(--red-bg); }
+
+    /* Collapsed state: show collapse bar */
+    .collapse-info {
+      display: none;
+      padding: 6px 12px;
+      font-size: 12px; color: var(--text3);
+      border-left: 1px solid var(--border);
+      align-items: center; gap: 8px;
+      flex: 1;
+    }
+    .job-card.collapsed .collapse-info { display: flex; }
+    .job-card.collapsed .job-middle { display: none; }
+
+    /* Stagger animation */
+    .job-card.stagger { opacity: 0; transform: translateY(12px); }
+    .job-card.stagger.enter {
+      opacity: 1; transform: translateY(0);
+      transition: opacity .5s ease, transform .5s ease;
+    }
+
+    /* === MODAL === */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(4px);
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+      z-index: 100;
+    }
+    .modal-overlay.show { opacity: 1; pointer-events: auto; }
+
+    .modal-dialog {
+      position: fixed;
+      right: 0; top: 0; bottom: 0;
+      width: min(520px, 100vw);
+      background: var(--bg2);
+      border-left: 1px solid var(--border2);
+      box-shadow: var(--shadow2);
+      transform: translateX(100%);
+      transition: transform .25s ease;
+      z-index: 101;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-dialog.show { transform: translateX(0); }
+
+    .modal-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      flex-shrink: 0;
+    }
+    .modal-head-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .modal-title { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .modal-sub { font-size: 12px; color: var(--text2); }
+    .modal-head-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: 99px;
+      font-size: 12px; font-weight: 600;
+    }
+    .status-badge .s-dot { width: 7px; height: 7px; border-radius: 99px; }
+    .status-badge.ok { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+    .status-badge.ok .s-dot { background: var(--green); }
+    .status-badge.warn { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
+    .status-badge.warn .s-dot { background: var(--yellow); }
+    .status-badge.info { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
+    .status-badge.info .s-dot { background: var(--blue); }
+    .status-badge.bad { background: var(--red-bg); color: var(--red); border: 1px solid rgba(240,98,146,.2); }
+    .status-badge.bad .s-dot { background: var(--red); }
+
+    .modal-body {
+      flex: 1; overflow-y: auto; padding: 20px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .modal-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px;
+    }
+    .modal-section h3 {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .8px; color: var(--text3); margin-bottom: 12px;
+    }
+    .modal-row {
+      display: grid; grid-template-columns: 100px 1fr;
+      gap: 8px; align-items: center; margin-bottom: 8px;
+    }
+    .modal-row:last-child { margin-bottom: 0; }
+    .modal-row label { font-size: 12px; color: var(--text2); }
+    .modal-input {
+      width: 100%; padding: 8px 12px;
+      background: var(--bg); border: 1px solid var(--border2); border-radius: 8px;
+      color: var(--text); font-size: 13px; font-family: var(--sans);
+      outline: none; transition: border-color .2s;
+    }
+    .modal-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-bg); }
+    textarea.modal-input { min-height: 120px; resize: vertical; line-height: 1.6; }
+
+    .modal-checks {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .modal-check {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-radius: 8px;
+      background: var(--bg); border: 1px solid var(--border);
+      font-size: 13px; cursor: pointer; user-select: none;
+      transition: border-color .15s;
+    }
+    .modal-check:hover { border-color: var(--border2); }
+    .modal-check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+    .modal-foot {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; color: var(--text3);
+      flex-shrink: 0;
+    }
+    .modal-foot .kbd {
+      padding: 2px 8px; border-radius: 6px;
+      background: var(--surface); border: 1px solid var(--border);
+      font-family: var(--mono); font-size: 10px;
+    }
+
+    /* === TOAST === */
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      padding: 8px 16px; border-radius: 99px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      color: var(--text); font-size: 13px; font-weight: 500;
+      box-shadow: var(--shadow);
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+      z-index: 200;
+    }
+    .toast.show { opacity: 1; }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 768px) {
+      .topbar { padding: 10px 14px; }
+      .toolbar { padding: 8px 14px; }
+      .main-content { padding: 10px 14px 80px; }
+      .kpi-bar { display: none; }
+      .job-card { grid-template-columns: 1fr; }
+      .job-left { border-right: none; border-bottom: 1px solid var(--border); }
+      .job-middle { flex-wrap: wrap; }
+      .job-right { flex-direction: row; border-left: none; border-top: 1px solid var(--border); min-width: 0; align-items: center; }
+      .collapse-info { border-left: none; border-top: 1px solid var(--border); }
+      .filter-group input { min-width: 120px; }
+      .modal-dialog { width: 100vw; }
+      .modal-row { grid-template-columns: 1fr; }
+      .pipe-card { min-width: 58px; padding: 5px 6px; }
+      .job-name-input, .job-fee-input { pointer-events: none; user-select: text; }
+      .job-name-input:focus, .job-fee-input:focus { box-shadow: none; border-color: transparent; }
+    }
+
+    /* Loading */
+    .loading-msg {
+      display: flex; align-items: center; justify-content: center;
+      padding: 60px; color: var(--text3); font-size: 14px;
+      gap: 10px;
+    }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border2); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+
+<body>
+  <!-- LOGIN -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-box">
+      <h2>ToDo 2026</h2>
+      <div class="login-sub">Jelentkezz be a folytatáshoz</div>
+      <form id="loginForm">
+        <input type="email" id="loginEmail" placeholder="Email" required autocomplete="email" />
+        <input type="password" id="loginPassword" placeholder="Jelszó" required autocomplete="current-password" />
+        <button type="submit" id="loginBtn">Bejelentkezés</button>
+        <div id="loginError" class="login-error"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div class="app" id="mainApp">
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-brand">ToDo 2026</div>
+        <div class="kpi-bar">
+          <div class="kpi-pill open"><span class="kpi-dot"></span> Nyitott: <span class="kpi-val" id="kpiOpen">0</span></div>
+          <div class="kpi-pill fee"><span class="kpi-dot"></span> Díj: <span class="kpi-val" id="kpiFee">0</span></div>
+          <div class="kpi-pill cost"><span class="kpi-dot"></span> Költs: <span class="kpi-val" id="kpiCost">0</span></div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span class="count-label" id="countLabel">0 / 0</span>
+        <button id="logoutBtn" class="btn btn-logout">Kijelentkezés</button>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-actions">
+        <button id="addRow" class="btn btn-accent" title="Új sor">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Új
+        </button>
+        <button id="dupRow" class="btn btn-icon" title="Duplikál" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        </button>
+        <button id="delRow" class="btn btn-icon btn-danger" title="Törlés" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+        </button>
+      </div>
+      <div class="toolbar-spacer"></div>
+      <div class="toolbar-filters">
+        <div class="filter-group">
+          <label>Keresés</label>
+          <input id="q" type="text" placeholder="Név / megjegyzés / munkaszám / mobil…" autocomplete="off" />
+        </div>
+        <div class="filter-group">
+          <label>Év</label>
+          <select id="year"><option value="">Mind</option></select>
+        </div>
+        <div class="filter-group">
+          <label>Hónap</label>
+          <select id="month">
+            <option value="">Mind</option>
+            <option value="1">Jan</option><option value="2">Feb</option><option value="3">Már</option>
+            <option value="4">Ápr</option><option value="5">Máj</option><option value="6">Jún</option>
+            <option value="7">Júl</option><option value="8">Aug</option><option value="9">Sze</option>
+            <option value="10">Okt</option><option value="11">Nov</option><option value="12">Dec</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Rejtett</label>
+          <input id="showHidden" type="checkbox" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content">
+      <div class="job-list" id="jobList">
+        <div class="loading-msg"><div class="spinner"></div> Betöltés...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL (slide-in panel) -->
+  <div class="modal-overlay" id="overlay"></div>
+  <div class="modal-dialog" id="modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-head">
+      <div class="modal-head-left">
+        <div class="modal-title" id="mTitle">Részletek</div>
+        <div class="modal-sub" id="mSub">—</div>
+      </div>
+      <div class="modal-head-right">
+        <span id="mStatus" class="status-badge info"><span class="s-dot"></span><span id="mStatusTxt">—</span></span>
+        <button id="closeModal" class="btn btn-icon" title="Bezár">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section">
+        <h3>Megjegyzés</h3>
+        <textarea class="modal-input" id="fNote" placeholder="Megjegyzés…"></textarea>
+      </div>
+      <div class="modal-section">
+        <h3>Elérhetőség</h3>
+        <div class="modal-row">
+          <label>Mobil</label>
+          <input class="modal-input" id="fMobil" placeholder="+36…" />
+        </div>
+      </div>
+      <div class="modal-section">
+        <h3>Admin</h3>
+        <div class="modal-row">
+          <label>Hó</label>
+          <input class="modal-input" id="fMonth" inputmode="numeric" placeholder="1–12" />
+        </div>
+        <div class="modal-row">
+          <label>Munkaszám</label>
+          <input class="modal-input" id="fMunkaszam" placeholder="pl. 2026/001" />
+        </div>
+        <div class="modal-row">
+          <label>1420000</label>
+          <input class="modal-input" id="f142" inputmode="decimal" placeholder="összeg" />
+        </div>
+        <div class="modal-row">
+          <label>Költség</label>
+          <input class="modal-input" id="fCost" inputmode="decimal" placeholder="összeg" />
+        </div>
+      </div>
+      <div class="modal-section">
+        <h3>Pipák</h3>
+        <div class="modal-checks">
+          <label class="modal-check"><input id="fFeltoltes" type="checkbox" /> feltöltés</label>
+          <label class="modal-check"><input id="fSzamlaMent" type="checkbox" /> számla ment</label>
+          <label class="modal-check"><input id="fKint" type="checkbox" /> Kint</label>
+          <label class="modal-check"><input id="fSzamlas" type="checkbox" /> Számlás</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div>ID: <span class="kbd" id="mId">—</span></div>
+      <div>Mentés: automatikus</div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Mentve</div>
+
+<script>
+  // === SUPABASE CONFIG ===
+  const SUPABASE_URL = 'https://jkgtnngehhkmatevsymo.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprZ3RubmdlaGhrbWF0ZXZzeW1vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNTA0NjMsImV4cCI6MjA4NTYyNjQ2M30.o6DbiL5ZN0CD-Obuftk_08Ii4t0uYWMqkJg5h5lt_vI';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      storageKey: 'todo-auth',
+      autoRefreshToken: true,
+      detectSessionInUrl: false
+    }
+  });
+
+  // === AUTH ===
+  const loginScreen = document.getElementById('loginScreen');
+  const mainApp = document.getElementById('mainApp');
+  const loginForm = document.getElementById('loginForm');
+  const loginEmail = document.getElementById('loginEmail');
+  const loginPassword = document.getElementById('loginPassword');
+  const loginBtn = document.getElementById('loginBtn');
+  const loginError = document.getElementById('loginError');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  function showLogin() {
+    loginScreen.style.display = 'flex';
+    mainApp.style.display = 'none';
+  }
+  function showApp() {
+    loginScreen.style.display = 'none';
+    mainApp.style.display = 'flex';
+  }
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Bejelentkezés...';
+    loginError.textContent = '';
+    const { data, error } = await db.auth.signInWithPassword({
+      email: loginEmail.value,
+      password: loginPassword.value
+    });
+    if (error) {
+      loginError.textContent = 'Hibás email vagy jelszó';
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Bejelentkezés';
+      return;
+    }
+    showApp();
+    startApp();
+  });
+
+  logoutBtn.addEventListener('click', async () => {
+    await db.auth.signOut();
+    showLogin();
+    rows = [];
+  });
+
+  (async function checkAuth() {
+    const { data: { session } } = await db.auth.getSession();
+    if (session) { showApp(); startApp(); }
+    else { showLogin(); }
+  })();
+
+  // === HELPERS ===
+  const nowIso = () => new Date().toISOString().slice(0,19).replace('T',' ');
+  const uid = () => (crypto?.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)+Date.now());
+
+  const SEQ_GROUPS = {
+    pay:   { keys:["offer_sent","accepted","paid"],     names:["Árajánlat","Elfogadva","Fizetve"], color:"var(--green)" },
+    field: { keys:["terep","ferc"],                     names:["Terep","Férc"],                    color:"var(--yellow)" },
+    grant: { keys:["igenyelve","utalva","kiadva"],      names:["Igényelve","Utalva","Kiadva"],     color:"var(--blue)" },
+    admin: { keys:["utalas_chk","email_chk","beadva"],  names:["Utalás","Email","Beadva"],         color:"var(--green)" },
+  };
+
+  const EXCEL_KEYS = [
+    "date","short_name","fee","cost",
+    "offer_sent","accepted","paid","terep","ferc",
+    "igenyelve","utalva","kiadva","beadva","email_chk","utalas_chk",
+    "is_full","parkolo","hidden",
+    "note","mobil","feltoltes","szamla_ment","munkaszam","is_kint","col_1420000","szamlas"
+  ];
+
+  function getMonth(r) {
+    if (r.date) { const m = new Date(r.date).getMonth() + 1; return isNaN(m) ? null : m; }
+    return r.month || null;
+  }
+
+  function computeStatus(r) {
+    if (r.paid) return { key:"done", label:"Kész", tone:"ok" };
+    if (r.accepted && !r.paid) return { key:"paywait", label:"Fizetésre vár", tone:"warn" };
+    if (r.offer_sent && !r.accepted) return { key:"offer", label:"Ajánlat kint", tone:"info" };
+    return { key:"prep", label:"Előkészítés", tone:"bad" };
+  }
+
+  function fmtNum(n) {
+    if (n === null || n === undefined || n === "") return "";
+    const x = Number(n);
+    if (!Number.isFinite(x)) return "";
+    return x.toLocaleString('hu-HU');
+  }
+  function parseNum(s) {
+    const t = String(s ?? "").trim();
+    if (!t) return null;
+    const cleaned = t.replace(/\s/g,'').replace(/,/g,'.');
+    const x = Number(cleaned);
+    return Number.isFinite(x) ? x : null;
+  }
+
+  // === SUPABASE DATA ===
+  async function loadRowsFromSupabase() {
+    try {
+      const { data, error } = await db.from('jobs').select('*').order('date', { ascending: false });
+      if (error) throw error;
+      return data.map(r => ({ ...r, month: getMonth(r), full: r.is_full, kint: r.is_kint }));
+    } catch(e) { console.error('Supabase load error:', e); return null; }
+  }
+
+  async function saveRowToSupabase(row) {
+    try {
+      const dbRow = { ...row, is_full: row.full ?? row.is_full ?? false, is_kint: row.kint ?? row.is_kint ?? false, updated_at: new Date().toISOString() };
+      delete dbRow.full; delete dbRow.kint; delete dbRow.month;
+      const { data, error } = await db.from('jobs').upsert(dbRow, { onConflict: 'id' }).select();
+      if (error) throw error;
+      return data?.[0];
+    } catch(e) { console.error('Supabase save error:', e); return null; }
+  }
+
+  async function deleteRowFromSupabase(id) {
+    try {
+      const { error } = await db.from('jobs').delete().eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch(e) { console.error('Supabase delete error:', e); return false; }
+  }
+
+  let _dirtyRows = new Set();
+  function scheduleSave(row) {
+    if (row?.id) _dirtyRows.add(row.id);
+    clearTimeout(scheduleSave._t);
+    scheduleSave._t = setTimeout(async () => {
+      for (const id of _dirtyRows) {
+        const r = rows.find(x => x.id === id);
+        if (r) await saveRowToSupabase(r);
+      }
+      _dirtyRows.clear();
+    }, 500);
+  }
+
+  function normalizePipeline(r, keys) {
+    let lastTrue = -1;
+    for (let i=0;i<keys.length;i++) { if (r[keys[i]]) lastTrue = i; }
+    for (let i=0;i<keys.length;i++) { r[keys[i]] = (i <= lastTrue); }
+  }
+
+  // === STATE ===
+  let rows = [];
+  let selectedId = null;
+  let didInitialAnimate = false;
+
+  const jobList = document.getElementById('jobList');
+  const qEl = document.getElementById('q');
+  const yearEl = document.getElementById('year');
+  const monthEl = document.getElementById('month');
+  const showHiddenEl = document.getElementById('showHidden');
+  const countLabel = document.getElementById('countLabel');
+  const kpiOpen = document.getElementById('kpiOpen');
+  const kpiFee = document.getElementById('kpiFee');
+  const kpiCost = document.getElementById('kpiCost');
+
+  const btnAdd = document.getElementById('addRow');
+  const btnDup = document.getElementById('dupRow');
+  const btnDel = document.getElementById('delRow');
+
+  const toast = document.getElementById('toast');
+  const overlay = document.getElementById('overlay');
+  const modal = document.getElementById('modal');
+  const closeModalBtn = document.getElementById('closeModal');
+
+  const mTitle = document.getElementById('mTitle');
+  const mSub = document.getElementById('mSub');
+  const mId = document.getElementById('mId');
+  const mStatus = document.getElementById('mStatus');
+  const mStatusTxt = document.getElementById('mStatusTxt');
+  const fNote = document.getElementById('fNote');
+  const fMobil = document.getElementById('fMobil');
+  const fMunkaszam = document.getElementById('fMunkaszam');
+  const fMonth = document.getElementById('fMonth');
+  const f142 = document.getElementById('f142');
+  const fCost = document.getElementById('fCost');
+  const fFeltoltes = document.getElementById('fFeltoltes');
+  const fSzamlaMent = document.getElementById('fSzamlaMent');
+  const fKint = document.getElementById('fKint');
+  const fSzamlas = document.getElementById('fSzamlas');
+
+  function quickToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(quickToast._t);
+    quickToast._t = setTimeout(() => toast.classList.remove('show'), 650);
+  }
+
+  // === FILTERS ===
+  [qEl, yearEl, monthEl, showHiddenEl].forEach(el => {
+    if (!el) return;
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === "/" && !modal.classList.contains('show')) {
+      const t = document.activeElement?.tagName;
+      if (t === "INPUT" || t === "TEXTAREA" || t === "SELECT") return;
+      e.preventDefault();
+      qEl?.focus();
+    }
+    if (e.key === "Escape" && document.activeElement === qEl) { qEl.value = ""; render(); }
+  });
+
+  function passesFilters(r) {
+    const showHidden = !!showHiddenEl?.checked;
+    if (!showHidden && r.hidden) return false;
+    const y = yearEl?.value ? String(yearEl.value) : "";
+    if (y && r.date) { if (String(new Date(r.date).getFullYear()) !== y) return false; }
+    const m = monthEl?.value ? String(monthEl.value) : "";
+    if (m && String(r.month ?? "") !== m) return false;
+    const q = (qEl?.value || "").trim().toLowerCase();
+    if (q) {
+      const hay = [r.short_name ?? "", r.note ?? "", r.munkaszam ?? "", r.mobil ?? "", String(r.month ?? "")].join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  }
+
+  function populateYearFilter() {
+    if (!yearEl) return;
+    const years = new Set();
+    rows.forEach(r => { if (r.date) { const y = new Date(r.date).getFullYear(); if (y) years.add(y); } });
+    const sorted = Array.from(years).sort((a,b) => b - a);
+    yearEl.innerHTML = '<option value="">Mind</option>';
+    sorted.forEach(y => { const opt = document.createElement('option'); opt.value = y; opt.textContent = y; yearEl.appendChild(opt); });
+  }
+
+  function updateKpis() {
+    const openRows = rows.filter(r => computeStatus(r).key !== "done" && (r.short_name||"").trim() !== "");
+    kpiOpen.textContent = String(openRows.length);
+    kpiFee.textContent = openRows.reduce((a,r) => a + (Number(r.fee)||0), 0).toLocaleString('hu-HU');
+    kpiCost.textContent = openRows.reduce((a,r) => a + (Number(r.cost)||0), 0).toLocaleString('hu-HU');
+  }
+
+  // === PIPELINE CARD ===
+  function isCollapsed(r) { return !!(r.parkolo || r.full); }
+
+  function currentIndexFor(r, keys) {
+    let idx = -1;
+    for (let i=0;i<keys.length;i++) { if (r[keys[i]]) idx = i; else break; }
+    return idx;
+  }
+  function applyIndex(r, keys, idx) {
+    if (idx < 0) keys.forEach(k => r[k] = false);
+    else keys.forEach((k,i) => r[k] = (i <= idx));
+  }
+
+  function createPipeCard(r, groupId) {
+    const g = SEQ_GROUPS[groupId];
+    const keys = g.keys;
+    const names = g.names;
+    const idx = currentIndexFor(r, keys);
+    const last = keys.length - 1;
+    const done = (idx === last);
+
+    const root = getComputedStyle(document.documentElement);
+    let color = root.getPropertyValue(g.color.replace('var(','').replace(')','').trim()).trim() || g.color;
+    // Fallback: parse color from CSS variable name
+    const colorMap = { '--green':'#3dd68c', '--yellow':'#f0c746', '--blue':'#42a5f5', '--red':'#f06292' };
+    const varName = g.color.replace('var(','').replace(')','').trim();
+    color = colorMap[varName] || color || '#6c7bf7';
+
+    if (groupId === "pay" && idx === 0 && !!r.offer_sent && !r.accepted && !r.paid) {
+      color = colorMap['--blue'];
+    }
+
+    const card = document.createElement('div');
+    card.className = "pipe-card" + (done ? " done" : "");
+    if (done) card.style.background = color;
+
+    card.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cur = currentIndexFor(r, keys);
+      const next = (cur < last) ? (cur + 1) : -1;
+      applyIndex(r, keys, next);
+      r.updated_at = nowIso();
+      scheduleSave(r);
+      quickToast("Frissítve");
+      render();
+    });
+
+    // Icon
+    const icon = document.createElement('div');
+    icon.className = "pipe-icon";
+    if (done) {
+      icon.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    } else {
+      // Progress dots
+      const size = 20;
+      const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('width', String(size));
+      svg.setAttribute('height', String(size));
+      svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+      const c = size / 2;
+      const radius = 7;
+      const gapDeg = 4;
+      for (let i=0;i<keys.length;i++) {
+        const per = 360/keys.length;
+        const startA = i*per + gapDeg/2 - 90;
+        const endA = (i+1)*per - gapDeg/2 - 90;
+        const sr = startA*Math.PI/180;
+        const er = endA*Math.PI/180;
+        const x1 = c + radius*Math.cos(sr);
+        const y1 = c + radius*Math.sin(sr);
+        const x2 = c + radius*Math.cos(er);
+        const y2 = c + radius*Math.sin(er);
+        const largeArc = (per-gapDeg) > 180 ? 1 : 0;
+        const d = `M ${c} ${c} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+        const fill = (i <= idx && idx >= 0) ? color : 'rgba(255,255,255,.1)';
+        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d', d);
+        path.setAttribute('fill', fill);
+        svg.appendChild(path);
+      }
+      icon.appendChild(svg);
+    }
+
+    // List
+    const list = document.createElement('div');
+    list.className = "pipe-list";
+    for (let i=0;i<names.length;i++) {
+      const item = document.createElement('div');
+      item.className = "pipe-item" + (i === idx ? " active" : "") + (!done && i > idx ? " pending" : "");
+      item.textContent = names[i];
+      list.appendChild(item);
+    }
+
+    card.appendChild(icon);
+    card.appendChild(list);
+    return card;
+  }
+
+  // === JOB CARD BUILDER ===
+  function createJobCard(r) {
+    const card = document.createElement('div');
+    card.className = "job-card";
+    card.dataset.id = r.id;
+    card.dataset.selected = (r.id === selectedId) ? "1" : "0";
+
+    // State classes
+    card.classList.toggle('fullrow', !!r.full);
+    card.classList.toggle('parkrow', !!r.parkolo && !r.full);
+    card.classList.toggle('collapsed', isCollapsed(r));
+
+    // Stagger animation
+    if (!didInitialAnimate) {
+      card.classList.add('stagger');
+      const d = (typeof render._idx === 'number' ? render._idx : 0);
+      render._idx = d + 1;
+      setTimeout(() => card.classList.add('enter'), 30 + d * 25);
+    }
+
+    // === LEFT: name + fee ===
+    const left = document.createElement('div');
+    left.className = "job-left";
+
+    const nameInp = document.createElement('input');
+    nameInp.className = "job-name-input";
+    nameInp.type = "text";
+    nameInp.value = r.short_name || "";
+    nameInp.placeholder = "Rövid név…";
+    nameInp.addEventListener('click', e => e.stopPropagation());
+    nameInp.addEventListener('dblclick', e => e.stopPropagation());
+    nameInp.addEventListener('keydown', e => { if (e.key === "Enter") nameInp.blur(); if (e.key === "Escape") { nameInp.value = r.short_name || ""; nameInp.blur(); } });
+    nameInp.addEventListener('blur', () => {
+      if ((r.short_name ?? "") !== nameInp.value) {
+        r.short_name = nameInp.value;
+        r.updated_at = nowIso();
+        scheduleSave(r);
+        quickToast("Frissítve");
+      }
+    });
+
+    const feeInp = document.createElement('input');
+    feeInp.className = "job-fee-input";
+    feeInp.type = "text";
+    feeInp.inputMode = "numeric";
+    feeInp.value = fmtNum(r.fee);
+    feeInp.placeholder = "díj";
+    feeInp.addEventListener('click', e => e.stopPropagation());
+    feeInp.addEventListener('dblclick', e => e.stopPropagation());
+    feeInp.addEventListener('keydown', e => { if (e.key === "Enter") feeInp.blur(); if (e.key === "Escape") { feeInp.value = fmtNum(r.fee); feeInp.blur(); } });
+    feeInp.addEventListener('blur', () => {
+      const parsed = parseNum(feeInp.value);
+      if ((r.fee ?? "") !== (parsed ?? "")) {
+        r.fee = parsed;
+        r.updated_at = nowIso();
+        scheduleSave(r);
+        quickToast("Frissítve");
+        updateKpis();
+      } else { feeInp.value = fmtNum(r.fee); }
+    });
+
+    left.appendChild(nameInp);
+    left.appendChild(feeInp);
+    card.appendChild(left);
+
+    // === MIDDLE: pipeline cards ===
+    const middle = document.createElement('div');
+    middle.className = "job-middle";
+
+    const pipeGroup = document.createElement('div');
+    pipeGroup.className = "pipe-group";
+    pipeGroup.appendChild(createPipeCard(r, "pay"));
+    pipeGroup.appendChild(createPipeCard(r, "field"));
+    pipeGroup.appendChild(createPipeCard(r, "grant"));
+    pipeGroup.appendChild(createPipeCard(r, "admin"));
+    middle.appendChild(pipeGroup);
+    card.appendChild(middle);
+
+    // Collapse info (visible when collapsed)
+    const colInfo = document.createElement('div');
+    colInfo.className = "collapse-info";
+    const st = computeStatus(r);
+    colInfo.innerHTML = `<span class="status-badge ${st.tone}" style="font-size:11px;padding:3px 8px;"><span class="s-dot"></span>${st.label}</span>`;
+    card.appendChild(colInfo);
+
+    // === RIGHT: FULL / Parkoló / Elrejtés ===
+    const right = document.createElement('div');
+    right.className = "job-right";
+    right.addEventListener('click', e => e.stopPropagation());
+    right.addEventListener('dblclick', e => e.stopPropagation());
+
+    const fullLabel = document.createElement('label');
+    fullLabel.className = "flag-check full-flag" + (r.parkolo ? " gone" : "");
+    const fullInp = document.createElement('input');
+    fullInp.type = "checkbox";
+    fullInp.checked = !!r.full;
+    fullLabel.appendChild(fullInp);
+    fullLabel.appendChild(document.createTextNode("FULL"));
+
+    const parkLabel = document.createElement('label');
+    parkLabel.className = "flag-check park-flag" + (r.full ? " gone" : "");
+    const parkInp = document.createElement('input');
+    parkInp.type = "checkbox";
+    parkInp.checked = !!r.parkolo;
+    parkLabel.appendChild(parkInp);
+    parkLabel.appendChild(document.createTextNode("Parkoló"));
+
+    // Hide controls
+    const hideWrap = document.createElement('div');
+    hideWrap.className = "hide-wrap" + (r.full && !r.parkolo ? " visible" : "");
+
+    const hideBtn = document.createElement('button');
+    hideBtn.className = "hide-btn";
+    hideBtn.textContent = "Elrejtés";
+
+    const hideConfirm = document.createElement('div');
+    hideConfirm.className = "hide-confirm";
+    const hcSpan = document.createElement('span');
+    hcSpan.textContent = "Biztos?";
+    const yesBtn = document.createElement('button');
+    yesBtn.className = "yes-btn";
+    yesBtn.textContent = "Igen";
+    const noBtn = document.createElement('button');
+    noBtn.textContent = "Nem";
+
+    hideBtn.addEventListener('click', () => { hideConfirm.classList.add('open'); });
+    noBtn.addEventListener('click', () => { hideConfirm.classList.remove('open'); });
+    yesBtn.addEventListener('click', () => {
+      card.classList.add('hiding');
+      setTimeout(() => {
+        r.hidden = true;
+        r.updated_at = nowIso();
+        scheduleSave(r);
+        if (selectedId === r.id) selectedId = null;
+        quickToast("Elrejtve");
+        render();
+      }, 400);
+    });
+
+    hideConfirm.appendChild(hcSpan);
+    hideConfirm.appendChild(yesBtn);
+    hideConfirm.appendChild(noBtn);
+    hideWrap.appendChild(hideBtn);
+    hideWrap.appendChild(hideConfirm);
+
+    function updateFlags() {
+      fullLabel.classList.toggle('gone', !!r.parkolo);
+      parkLabel.classList.toggle('gone', !!r.full);
+      hideWrap.classList.toggle('visible', !!r.full && !r.parkolo);
+      card.classList.toggle('fullrow', !!r.full);
+      card.classList.toggle('parkrow', !!r.parkolo && !r.full);
+      card.classList.toggle('collapsed', isCollapsed(r));
+    }
+
+    fullInp.addEventListener('change', () => {
+      if (fullInp.checked) { r.full = true; r.parkolo = false; parkInp.checked = false; }
+      else { r.full = false; }
+      r.updated_at = nowIso();
+      scheduleSave(r);
+      quickToast("Frissítve");
+      updateFlags();
+      updateKpis();
+      clearTimeout(card._syncT);
+      card._syncT = setTimeout(() => render(), 600);
+    });
+
+    parkInp.addEventListener('change', () => {
+      if (parkInp.checked) { r.parkolo = true; r.full = false; fullInp.checked = false; }
+      else { r.parkolo = false; }
+      r.updated_at = nowIso();
+      scheduleSave(r);
+      quickToast("Frissítve");
+      updateFlags();
+      updateKpis();
+      clearTimeout(card._syncT);
+      card._syncT = setTimeout(() => render(), 600);
+    });
+
+    right.appendChild(fullLabel);
+    right.appendChild(parkLabel);
+    right.appendChild(hideWrap);
+    card.appendChild(right);
+
+    // === CLICK HANDLERS ===
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('input, button, label, select, textarea, a')) return;
+      selectedId = (selectedId === r.id) ? null : r.id;
+      renderSelection();
+    });
+
+    // Long-press for mobile
+    let lpTimer = null, lpTriggered = false;
+    card.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch') return;
+      if (e.target.closest('input, button, label, a, select, textarea')) return;
+      lpTriggered = false;
+      clearTimeout(lpTimer);
+      lpTimer = setTimeout(() => {
+        lpTriggered = true;
+        selectedId = r.id;
+        renderSelection();
+        openModalFor(r.id);
+      }, 550);
+    });
+    card.addEventListener('pointerup', () => clearTimeout(lpTimer));
+    card.addEventListener('pointercancel', () => clearTimeout(lpTimer));
+    card.addEventListener('pointermove', (e) => { if (Math.abs(e.movementX) + Math.abs(e.movementY) > 6) clearTimeout(lpTimer); });
+    card.addEventListener('click', (e) => { if (lpTriggered) { e.preventDefault(); e.stopPropagation(); lpTriggered = false; } }, true);
+
+    card.addEventListener('dblclick', (e) => {
+      if (e.target.closest('input, button, label')) return;
+      selectedId = r.id;
+      renderSelection();
+      openModalFor(r.id);
+    });
+
+    return card;
+  }
+
+  // === RENDER ===
+  function render() {
+    const filtered = rows.filter(passesFilters);
+    jobList.innerHTML = "";
+
+    for (const r of filtered) {
+      jobList.appendChild(createJobCard(r));
+    }
+
+    if (!didInitialAnimate) {
+      didInitialAnimate = true;
+      render._idx = 0;
+    }
+
+    countLabel.textContent = `${filtered.length} / ${rows.length}`;
+    updateKpis();
+    renderSelection();
+  }
+
+  function renderSelection() {
+    jobList.querySelectorAll('.job-card').forEach(card => {
+      card.dataset.selected = (card.dataset.id === selectedId) ? "1" : "0";
+    });
+    btnDup.disabled = !selectedId;
+    btnDel.disabled = !selectedId;
+  }
+
+  // Clear selection
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#dupRow') || e.target.closest('#delRow')) return;
+    const card = e.target.closest('.job-card');
+    if (card) {
+      if (e.target.closest('input, button, select, textarea, label, a')) {
+        if (selectedId) { selectedId = null; renderSelection(); }
+      }
+      return;
+    }
+    if (selectedId) { selectedId = null; renderSelection(); }
+  }, true);
+
+  // === MODAL ===
+  function openModalFor(id) {
+    const r = rows.find(x => x.id === id);
+    if (!r) return;
+    selectedId = id;
+    renderSelection();
+
+    mTitle.textContent = r.short_name || "Részletek";
+    mSub.textContent = `Hó: ${r.month || "—"} | Munkaszám: ${r.munkaszam || "—"}`;
+    mId.textContent = r.id.slice(0,10);
+    const st = computeStatus(r);
+    mStatus.className = `status-badge ${st.tone}`;
+    mStatusTxt.textContent = st.label;
+
+    fNote.value = r.note || "";
+    fMobil.value = r.mobil || "";
+    fMunkaszam.value = r.munkaszam || "";
+    if (fMonth) fMonth.value = (r.month ?? "");
+    if (f142) f142.value = fmtNum(r.col_1420000);
+    if (fCost) fCost.value = fmtNum(r.cost);
+    fFeltoltes.checked = !!r.feltoltes;
+    fSzamlaMent.checked = !!r.szamla_ment;
+    fKint.checked = !!r.kint;
+    fSzamlas.checked = !!r.szamlas;
+
+    overlay.classList.add('show');
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden','false');
+    if (!window.matchMedia('(max-width: 768px)').matches) {
+      setTimeout(() => fNote.focus(), 100);
+    }
+  }
+
+  function closeModalFn() {
+    overlay.classList.remove('show');
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden','true');
+  }
+
+  function saveModalField() {
+    const r = rows.find(x => x.id === selectedId);
+    if (!r) return;
+    r.note = fNote.value ?? "";
+    r.mobil = fMobil.value ?? "";
+    r.munkaszam = fMunkaszam.value ?? "";
+    if (fMonth) {
+      const n = Number(String(fMonth.value ?? "").trim());
+      r.month = (Number.isFinite(n) && n >= 1 && n <= 12) ? n : "";
+      if (r.month) {
+        const year = r.date ? new Date(r.date).getFullYear() : new Date().getFullYear();
+        r.date = `${year}-${String(r.month).padStart(2,'0')}-01`;
+      }
+    }
+    if (f142) r.col_1420000 = parseNum(f142.value);
+    if (fCost) r.cost = parseNum(fCost.value);
+    r.feltoltes = !!fFeltoltes.checked;
+    r.szamla_ment = !!fSzamlaMent.checked;
+    r.kint = !!fKint.checked;
+    r.szamlas = !!fSzamlas.checked;
+    r.updated_at = nowIso();
+    scheduleSave(r);
+    quickToast("Mentve");
+  }
+
+  function debouncedSave() {
+    clearTimeout(debouncedSave._t);
+    debouncedSave._t = setTimeout(saveModalField, 220);
+  }
+
+  [fNote, fMobil, fMunkaszam, f142, fCost].forEach(el => { if (el) el.addEventListener('input', debouncedSave); });
+  [fFeltoltes, fSzamlaMent, fKint, fSzamlas].forEach(el => { if (el) el.addEventListener('change', saveModalField); });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === "Escape" && modal.classList.contains('show')) closeModalFn();
+  });
+
+  closeModalBtn.addEventListener('click', closeModalFn);
+  overlay.addEventListener('click', closeModalFn);
+
+  // === TOOLBAR ACTIONS ===
+  btnAdd.addEventListener('click', () => {
+    const now = new Date();
+    const r = {
+      id: uid(),
+      date: `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`,
+      month: now.getMonth() + 1,
+      short_name:"", fee:null, cost:null,
+      offer_sent:false, accepted:false, paid:false,
+      terep:false, ferc:false,
+      igenyelve:false, utalva:false, kiadva:false,
+      beadva:false, email_chk:false, utalas_chk:false,
+      full:false, parkolo:false, hidden:false,
+      note:"", mobil:"",
+      feltoltes:false, szamla_ment:false,
+      munkaszam:"", kint:false, col_1420000:null, szamlas:false,
+      updated_at: nowIso()
+    };
+    rows.unshift(r);
+    selectedId = r.id;
+    scheduleSave(r);
+    quickToast("Új sor");
+    render();
+    openModalFor(r.id);
+  });
+
+  btnDup.addEventListener('click', () => {
+    if (!selectedId) return;
+    const p = rows.find(r => r.id === selectedId);
+    if (!p) return;
+    const copy = JSON.parse(JSON.stringify(p));
+    copy.id = uid();
+    copy.updated_at = nowIso();
+    rows.unshift(copy);
+    selectedId = copy.id;
+    scheduleSave(copy);
+    quickToast("Duplikálva");
+    render();
+  });
+
+  btnDel.addEventListener('click', async () => {
+    if (!selectedId) return;
+    const success = await deleteRowFromSupabase(selectedId);
+    if (success) {
+      rows = rows.filter(r => r.id !== selectedId);
+      selectedId = null;
+      quickToast("Törölve");
+      render();
+    } else { quickToast("Hiba törléskor"); }
+  });
+
+  // === START ===
+  async function startApp() {
+    jobList.innerHTML = '<div class="loading-msg"><div class="spinner"></div> Betöltés...</div>';
+    const loaded = await loadRowsFromSupabase();
+    rows = (loaded && loaded.length) ? loaded : [];
+    populateYearFilter();
+    render();
+  }
+</script>
+</body>
+</html>
