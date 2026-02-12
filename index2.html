@@ -342,6 +342,23 @@
     }
     .stats-grand b { color: #2e7d32; }
 
+    /* Chart */
+    .stats-chart-wrap {
+      margin-bottom: 20px;
+      padding: 12px;
+      background: #f5f5f5;
+      border-radius: 6px;
+      border: 1px solid #e0e0e0;
+    }
+    .stats-chart-title {
+      font-size: 13px; font-weight: 700; color: #283593;
+      margin-bottom: 8px; text-align: center;
+    }
+    .stats-chart-canvas {
+      width: 100%; height: 260px;
+      display: block;
+    }
+
     /* Summary row */
     .summary-row td {
       background: #e0e0e0;
@@ -1161,12 +1178,138 @@
     if (sortedYears.length === 0) {
       html = '<p style="color:#888;text-align:center;padding:20px;">Nincs fizetve jelölt rekord.</p>';
     } else {
+      // Chart placeholder before tables
+      const chartHtml = `<div class="stats-chart-wrap">
+        <div class="stats-chart-title">Éves bevételek</div>
+        <canvas class="stats-chart-canvas" id="revenueChart"></canvas>
+      </div>`;
+      html = chartHtml + html;
+
       html += `<div class="stats-grand">
         Összes bevétel (minden év): <b>${grandTotal.toLocaleString('hu-HU')} Ft</b> &mdash; ${grandCount} fizetve rekord
       </div>`;
     }
 
     statsBody.innerHTML = html;
+
+    // Draw chart if data exists
+    if (sortedYears.length > 0) {
+      const chartYears = sortedYears.map(Number).sort((a,b) => a - b);
+      const chartValues = chartYears.map(yr => {
+        const yearRows = byYear[yr];
+        let total = 0;
+        for (const r of yearRows) {
+          total += (Number(r.fee) || 0) - (Number(r.cost) || 0);
+        }
+        return total;
+      });
+      drawRevenueChart('revenueChart', chartYears, chartValues);
+    }
+  }
+
+  function drawRevenueChart(canvasId, labels, values) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    const W = rect.width;
+    const H = rect.height;
+
+    const padLeft = 70, padRight = 20, padTop = 16, padBottom = 36;
+    const chartW = W - padLeft - padRight;
+    const chartH = H - padTop - padBottom;
+
+    const maxVal = Math.max(...values, 0);
+    const minVal = Math.min(...values, 0);
+    const range = (maxVal - minVal) || 1;
+
+    // Gridlines
+    const gridSteps = 5;
+    ctx.strokeStyle = '#d0d0d0';
+    ctx.lineWidth = 0.5;
+    ctx.fillStyle = '#666';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i <= gridSteps; i++) {
+      const val = minVal + (range * i / gridSteps);
+      const y = padTop + chartH - (chartH * (val - minVal) / range);
+      ctx.beginPath();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(padLeft + chartW, y);
+      ctx.stroke();
+      ctx.fillText(Math.round(val).toLocaleString('hu-HU'), padLeft - 6, y);
+    }
+
+    // Zero line
+    if (minVal < 0) {
+      const zeroY = padTop + chartH - (chartH * (0 - minVal) / range);
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, zeroY);
+      ctx.lineTo(padLeft + chartW, zeroY);
+      ctx.stroke();
+    }
+
+    // Bars
+    const barCount = labels.length;
+    const barGap = Math.max(6, chartW * 0.08 / barCount);
+    const barW = Math.min(60, (chartW - barGap * (barCount + 1)) / barCount);
+    const totalBarsW = barCount * barW + (barCount + 1) * barGap;
+    const offsetX = padLeft + (chartW - totalBarsW) / 2;
+
+    const zeroY = padTop + chartH - (chartH * (0 - minVal) / range);
+
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+
+    for (let i = 0; i < barCount; i++) {
+      const x = offsetX + barGap * (i + 1) + barW * i;
+      const val = values[i];
+      const valY = padTop + chartH - (chartH * (val - minVal) / range);
+
+      // Bar
+      const barTop = Math.min(valY, zeroY);
+      const barH = Math.abs(valY - zeroY);
+      const grad = ctx.createLinearGradient(x, barTop, x, barTop + barH);
+      if (val >= 0) {
+        grad.addColorStop(0, '#43a047');
+        grad.addColorStop(1, '#2e7d32');
+      } else {
+        grad.addColorStop(0, '#e53935');
+        grad.addColorStop(1, '#c62828');
+      }
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      const radius = Math.min(4, barW / 4, barH / 2);
+      if (barH > 0) {
+        ctx.moveTo(x + radius, barTop);
+        ctx.lineTo(x + barW - radius, barTop);
+        ctx.quadraticCurveTo(x + barW, barTop, x + barW, barTop + radius);
+        ctx.lineTo(x + barW, barTop + barH);
+        ctx.lineTo(x, barTop + barH);
+        ctx.lineTo(x, barTop + radius);
+        ctx.quadraticCurveTo(x, barTop, x + radius, barTop);
+      }
+      ctx.fill();
+
+      // Value on top
+      ctx.fillStyle = '#333';
+      ctx.font = 'bold 11px -apple-system, sans-serif';
+      const valText = (val / 1000000).toFixed(1) + 'M';
+      const labelY = val >= 0 ? barTop - 6 : barTop + barH + 14;
+      ctx.fillText(valText, x + barW / 2, labelY);
+
+      // Year label
+      ctx.fillStyle = '#444';
+      ctx.font = '12px -apple-system, sans-serif';
+      ctx.fillText(String(labels[i]), x + barW / 2, H - padBottom + 18);
+    }
   }
 
   // Keyboard shortcuts
