@@ -1098,11 +1098,27 @@
     if (e.target === statsOverlay) statsOverlay.classList.remove('open');
   });
 
+  // Historikus adatok a 2009-2020.csv fájlból (statikus)
+  const historicData = {
+    2009: {1:70000,2:40000,3:154000,4:200000,5:240000,6:130000,7:140000,8:125000,9:230000,10:214000,11:270000,12:130000},
+    2010: {1:170000,2:80000,3:120000,4:290000,5:197000,6:112000,7:55000,8:210000,9:100000,10:240000,11:184000,12:90000},
+    2011: {1:0,2:123000,3:227500,4:107750,5:120750,6:68000,7:45000,8:45000,9:187000,10:43200,11:111600,12:127200},
+    2012: {1:185000,2:55000,3:236500,4:205000,5:142500,6:150000,7:303000,8:217500,9:154450,10:420000,11:210000,12:230000},
+    2013: {1:157000,2:230000,3:235000,4:295000,5:150000,6:215000,7:430000,8:240000,9:320000,10:600000,11:310000,12:175000},
+    2014: {1:284000,2:285000,3:340000,4:550000,5:215000,6:525000,7:420000,8:200000,9:191500,10:380000,11:115200,12:180000},
+    2015: {1:290000,2:140000,3:255000,4:735000,5:280000,6:350000,7:130000,8:278000,9:270000,10:283000,11:230000,12:480000},
+    2016: {1:295000,2:345000,3:150000,4:180000,5:540000,6:575000,7:415000,8:80000,9:210000,10:135000,11:100000,12:435000},
+    2017: {1:80000,2:165000,3:335000,4:265000,5:295000,6:300000,7:185000,8:435000,9:175000,10:225000,11:185000,12:200000},
+    2018: {1:275000,2:465000,3:295000,4:360000,5:310000,6:175000,7:490000,8:280000,9:200000,10:220000,11:235000,12:392000},
+    2019: {1:260000,2:675000,3:240000,4:495000,5:1470000,6:220000,7:388400,8:805000,9:440000,10:660000,11:315000,12:180000},
+    2020: {1:1233200,2:688800,3:60200,4:200400,5:342750,6:468800,7:697100,8:576300,9:402400,10:1080600,11:1227200,12:892400}
+  };
+
   function renderStats() {
     // Only count rows where paid === true
     const paidRows = rows.filter(r => r.paid);
 
-    // Group by year
+    // Group by year from live data
     const byYear = {};
     for (const r of paidRows) {
       const yr = r.date ? new Date(r.date).getFullYear() : null;
@@ -1111,60 +1127,79 @@
       byYear[yr].push(r);
     }
 
-    const sortedYears = Object.keys(byYear).sort((a,b) => Number(b) - Number(a));
+    // Merge historic years (only add years not already in live data)
+    const allYears = new Set([...Object.keys(byYear), ...Object.keys(historicData).map(String)]);
+    const sortedYears = [...allYears].sort((a,b) => Number(b) - Number(a));
 
+    const monthNames = ['','Jan','Feb','Már','Ápr','Máj','Jún','Júl','Aug','Sze','Okt','Nov','Dec'];
     let html = '';
     let grandTotal = 0;
     let grandCount = 0;
+    const chartData = {}; // year -> total for chart
 
     for (const yr of sortedYears) {
-      const yearRows = byYear[yr];
+      const yrNum = Number(yr);
+      const hasLive = byYear[yr] && byYear[yr].length > 0;
+      const hasHistoric = historicData[yrNum];
 
-      // Group by month
+      // Build month data from live rows
       const byMonth = {};
-      for (const r of yearRows) {
-        const m = r.month || 0;
-        if (!byMonth[m]) byMonth[m] = [];
-        byMonth[m].push(r);
+      if (hasLive) {
+        for (const r of byYear[yr]) {
+          const m = r.month || 0;
+          if (!byMonth[m]) byMonth[m] = { count: 0, sum: 0 };
+          byMonth[m].count++;
+          byMonth[m].sum += (Number(r.fee) || 0) - (Number(r.cost) || 0);
+        }
       }
 
-      const monthNames = ['','Jan','Feb','Már','Ápr','Máj','Jún','Júl','Aug','Sze','Okt','Nov','Dec'];
+      // Merge historic month data for years with no live data
+      if (hasHistoric && !hasLive) {
+        for (let m = 1; m <= 12; m++) {
+          const val = historicData[yrNum][m] || 0;
+          if (val > 0) {
+            byMonth[m] = { count: 0, sum: val, historic: true };
+          }
+        }
+      }
+
       const sortedMonths = Object.keys(byMonth).map(Number).sort((a,b) => a - b);
 
       let yearTotal = 0;
+      let yearCount = 0;
       let monthRows = '';
 
       for (const m of sortedMonths) {
-        const mrs = byMonth[m];
-        let monthSum = 0;
-        for (const r of mrs) {
-          const fee = Number(r.fee) || 0;
-          const cost = Number(r.cost) || 0;
-          monthSum += fee - cost;
-        }
-        yearTotal += monthSum;
+        const md = byMonth[m];
+        yearTotal += md.sum;
+        yearCount += md.count;
         const label = m >= 1 && m <= 12 ? monthNames[m] : 'Ismeretlen';
+        const countLabel = md.historic ? '-' : `${md.count} db`;
         monthRows += `<tr>
           <td>${label}</td>
-          <td class="num">${mrs.length} db</td>
-          <td class="num">${monthSum.toLocaleString('hu-HU')} Ft</td>
+          <td class="num">${countLabel}</td>
+          <td class="num">${md.sum.toLocaleString('hu-HU')} Ft</td>
         </tr>`;
       }
 
       const activeMonthCount = sortedMonths.length;
       const monthlyAvg = activeMonthCount > 0 ? Math.round(yearTotal / activeMonthCount) : 0;
       grandTotal += yearTotal;
-      grandCount += yearRows.length;
+      grandCount += yearCount;
+      chartData[yrNum] = yearTotal;
+
+      const yearTag = hasHistoric && !hasLive ? `${yr} <span style="font-size:0.7em;color:#888;">(archív)</span>` : yr;
+      const countLabel = hasHistoric && !hasLive ? '-' : `${yearCount} db`;
 
       html += `<div class="stats-year-block">
-        <div class="stats-year-title">${yr}</div>
+        <div class="stats-year-title">${yearTag}</div>
         <table class="stats-table">
           <thead><tr><th>Hónap</th><th style="text-align:right">Rekordok</th><th style="text-align:right">Bevétel</th></tr></thead>
           <tbody>
             ${monthRows}
             <tr class="total-row">
               <td>Összesen</td>
-              <td class="num">${yearRows.length} db</td>
+              <td class="num">${countLabel}</td>
               <td class="num">${yearTotal.toLocaleString('hu-HU')} Ft</td>
             </tr>
             <tr class="avg-row">
@@ -1178,7 +1213,7 @@
     }
 
     if (sortedYears.length === 0) {
-      html = '<p style="color:#888;text-align:center;padding:20px;">Nincs fizetve jelölt rekord.</p>';
+      html = '<p style="color:#888;text-align:center;padding:20px;">Nincs adat.</p>';
     } else {
       // Chart placeholder before tables
       const chartHtml = `<div class="stats-chart-wrap">
@@ -1188,7 +1223,7 @@
       html = chartHtml + html;
 
       html += `<div class="stats-grand">
-        Összes bevétel (minden év): <b>${grandTotal.toLocaleString('hu-HU')} Ft</b> &mdash; ${grandCount} fizetve rekord
+        Összes bevétel (minden év): <b>${grandTotal.toLocaleString('hu-HU')} Ft</b>
       </div>`;
     }
 
@@ -1197,15 +1232,8 @@
     // Store chart data for deferred drawing
     _lastChartData = null;
     if (sortedYears.length > 0) {
-      const chartYears = sortedYears.map(Number).sort((a,b) => a - b);
-      const chartValues = chartYears.map(yr => {
-        const yearRows = byYear[yr];
-        let total = 0;
-        for (const r of yearRows) {
-          total += (Number(r.fee) || 0) - (Number(r.cost) || 0);
-        }
-        return total;
-      });
+      const chartYears = Object.keys(chartData).map(Number).sort((a,b) => a - b);
+      const chartValues = chartYears.map(yr => chartData[yr]);
       _lastChartData = { labels: chartYears, values: chartValues };
     }
   }
