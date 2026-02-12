@@ -1090,6 +1090,8 @@
   statsBtn.addEventListener('click', () => {
     renderStats();
     statsOverlay.classList.add('open');
+    // Draw chart after modal is visible so canvas has dimensions
+    requestAnimationFrame(() => drawChartIfNeeded());
   });
   statsClose.addEventListener('click', () => statsOverlay.classList.remove('open'));
   statsOverlay.addEventListener('click', (e) => {
@@ -1192,7 +1194,8 @@
 
     statsBody.innerHTML = html;
 
-    // Draw chart if data exists
+    // Store chart data for deferred drawing
+    _lastChartData = null;
     if (sortedYears.length > 0) {
       const chartYears = sortedYears.map(Number).sort((a,b) => a - b);
       const chartValues = chartYears.map(yr => {
@@ -1203,8 +1206,14 @@
         }
         return total;
       });
-      drawRevenueChart('revenueChart', chartYears, chartValues);
+      _lastChartData = { labels: chartYears, values: chartValues };
     }
+  }
+
+  let _lastChartData = null;
+  function drawChartIfNeeded() {
+    if (!_lastChartData) return;
+    drawRevenueChart('revenueChart', _lastChartData.labels, _lastChartData.values);
   }
 
   function drawRevenueChart(canvasId, labels, values) {
