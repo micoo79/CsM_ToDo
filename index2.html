@@ -1081,7 +1081,7 @@
 
   function renderStats() {
     // Only count rows where paid === true
-    const paidRows = rows.filter(r => r.paid && !r.hidden);
+    const paidRows = rows.filter(r => r.paid);
 
     // Group by year
     const byYear = {};
