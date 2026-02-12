@@ -251,6 +251,97 @@
     .year-dropdown label:hover { background: #e8f5e9; }
     .year-dropdown input[type="checkbox"] { accent-color: #2e7d32; cursor: pointer; }
 
+    /* Stats button */
+    .tbtn.stats { background: #e8eaf6; border-color: #9fa8da; color: #283593; }
+    .tbtn.stats:hover { background: #c5cae9; }
+
+    /* Stats modal */
+    .stats-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.4);
+      display: none; align-items: center; justify-content: center;
+      z-index: 300;
+    }
+    .stats-overlay.open { display: flex; }
+    .stats-modal {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.25);
+      width: 90%; max-width: 600px;
+      max-height: 80vh;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .stats-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      background: #283593;
+      color: #fff;
+      font-size: 15px; font-weight: 700;
+    }
+    .stats-close {
+      background: none; border: none; color: #fff;
+      font-size: 20px; cursor: pointer; line-height: 1;
+      padding: 0 4px;
+    }
+    .stats-close:hover { opacity: .7; }
+    .stats-body {
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .stats-year-block {
+      margin-bottom: 20px;
+    }
+    .stats-year-block:last-child { margin-bottom: 0; }
+    .stats-year-title {
+      font-size: 14px; font-weight: 700;
+      color: #283593;
+      padding: 6px 0;
+      border-bottom: 2px solid #c5cae9;
+      margin-bottom: 10px;
+    }
+    .stats-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .stats-table th {
+      text-align: left;
+      padding: 5px 8px;
+      background: #e8eaf6;
+      border: 1px solid #c5cae9;
+      font-weight: 600;
+      color: #333;
+    }
+    .stats-table td {
+      padding: 5px 8px;
+      border: 1px solid #e0e0e0;
+    }
+    .stats-table td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+    }
+    .stats-table tr.total-row td {
+      background: #e8f5e9;
+      font-weight: 700;
+      border-top: 2px solid #2e7d32;
+    }
+    .stats-table tr.avg-row td {
+      background: #fff8e1;
+      font-weight: 600;
+      font-style: italic;
+    }
+    .stats-grand {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: #e8f5e9;
+      border: 1px solid #a5d6a7;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .stats-grand b { color: #2e7d32; }
+
     /* Summary row */
     .summary-row td {
       background: #e0e0e0;
@@ -326,6 +417,7 @@
         <button id="dupRow" class="tbtn" title="Duplikál" disabled>Duplikál</button>
         <button id="delRow" class="tbtn danger" title="Törlés" disabled>Törlés</button>
         <button id="hideRow" class="tbtn hide-toggle" title="Elrejtés / Megjelenítés" disabled>Elrejtés</button>
+        <button id="statsBtn" class="tbtn stats" title="Statisztika">Statisztika</button>
       </div>
       <div class="toolbar-spacer"></div>
       <div class="toolbar-filters">
@@ -352,6 +444,17 @@
     <!-- Table -->
     <div class="table-wrap" id="tableWrap">
       <div class="loading-msg"><div class="spinner"></div> Betöltés...</div>
+    </div>
+  </div>
+
+  <!-- Stats modal -->
+  <div class="stats-overlay" id="statsOverlay">
+    <div class="stats-modal">
+      <div class="stats-header">
+        <span>Bevétel statisztika</span>
+        <button class="stats-close" id="statsClose">&times;</button>
+      </div>
+      <div class="stats-body" id="statsBody"></div>
     </div>
   </div>
 
@@ -960,6 +1063,111 @@
     quickToast(r.hidden ? 'Elrejtve' : 'Láthatóvá téve');
     render();
   });
+
+  // === STATS MODAL ===
+  const statsBtn = document.getElementById('statsBtn');
+  const statsOverlay = document.getElementById('statsOverlay');
+  const statsClose = document.getElementById('statsClose');
+  const statsBody = document.getElementById('statsBody');
+
+  statsBtn.addEventListener('click', () => {
+    renderStats();
+    statsOverlay.classList.add('open');
+  });
+  statsClose.addEventListener('click', () => statsOverlay.classList.remove('open'));
+  statsOverlay.addEventListener('click', (e) => {
+    if (e.target === statsOverlay) statsOverlay.classList.remove('open');
+  });
+
+  function renderStats() {
+    // Only count rows where paid === true
+    const paidRows = rows.filter(r => r.paid && !r.hidden);
+
+    // Group by year
+    const byYear = {};
+    for (const r of paidRows) {
+      const yr = r.date ? new Date(r.date).getFullYear() : null;
+      if (!yr) continue;
+      if (!byYear[yr]) byYear[yr] = [];
+      byYear[yr].push(r);
+    }
+
+    const sortedYears = Object.keys(byYear).sort((a,b) => Number(b) - Number(a));
+
+    let html = '';
+    let grandTotal = 0;
+    let grandCount = 0;
+
+    for (const yr of sortedYears) {
+      const yearRows = byYear[yr];
+
+      // Group by month
+      const byMonth = {};
+      for (const r of yearRows) {
+        const m = r.month || 0;
+        if (!byMonth[m]) byMonth[m] = [];
+        byMonth[m].push(r);
+      }
+
+      const monthNames = ['','Jan','Feb','Már','Ápr','Máj','Jún','Júl','Aug','Sze','Okt','Nov','Dec'];
+      const sortedMonths = Object.keys(byMonth).map(Number).sort((a,b) => a - b);
+
+      let yearTotal = 0;
+      let monthRows = '';
+
+      for (const m of sortedMonths) {
+        const mrs = byMonth[m];
+        let monthSum = 0;
+        for (const r of mrs) {
+          const fee = Number(r.fee) || 0;
+          const cost = Number(r.cost) || 0;
+          monthSum += fee - cost;
+        }
+        yearTotal += monthSum;
+        const label = m >= 1 && m <= 12 ? monthNames[m] : 'Ismeretlen';
+        monthRows += `<tr>
+          <td>${label}</td>
+          <td class="num">${mrs.length} db</td>
+          <td class="num">${monthSum.toLocaleString('hu-HU')} Ft</td>
+        </tr>`;
+      }
+
+      const activeMonthCount = sortedMonths.length;
+      const monthlyAvg = activeMonthCount > 0 ? Math.round(yearTotal / activeMonthCount) : 0;
+      grandTotal += yearTotal;
+      grandCount += yearRows.length;
+
+      html += `<div class="stats-year-block">
+        <div class="stats-year-title">${yr}</div>
+        <table class="stats-table">
+          <thead><tr><th>Hónap</th><th style="text-align:right">Rekordok</th><th style="text-align:right">Bevétel</th></tr></thead>
+          <tbody>
+            ${monthRows}
+            <tr class="total-row">
+              <td>Összesen</td>
+              <td class="num">${yearRows.length} db</td>
+              <td class="num">${yearTotal.toLocaleString('hu-HU')} Ft</td>
+            </tr>
+            <tr class="avg-row">
+              <td>Havi átlag</td>
+              <td class="num">${activeMonthCount} hónap</td>
+              <td class="num">${monthlyAvg.toLocaleString('hu-HU')} Ft</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>`;
+    }
+
+    if (sortedYears.length === 0) {
+      html = '<p style="color:#888;text-align:center;padding:20px;">Nincs fizetve jelölt rekord.</p>';
+    } else {
+      html += `<div class="stats-grand">
+        Összes bevétel (minden év): <b>${grandTotal.toLocaleString('hu-HU')} Ft</b> &mdash; ${grandCount} fizetve rekord
+      </div>`;
+    }
+
+    statsBody.innerHTML = html;
+  }
 
   // Keyboard shortcuts
   window.addEventListener('keydown', (e) => {
