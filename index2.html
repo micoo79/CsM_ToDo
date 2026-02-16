@@ -292,6 +292,35 @@
     .tbtn.show-toggle { background: #eaf5f5; border-color: #007172; color: #025259; }
     .tbtn.show-toggle:hover { background: #d0ecec; }
 
+    /* Kintlévőség counter */
+    .kintlevoseg-label {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13px; font-weight: 600;
+      color: #025259;
+      padding: 4px 10px;
+      background: #eaf5f5;
+      border: 1px solid #007172;
+      border-radius: 4px;
+      white-space: nowrap;
+      flex-wrap: wrap;
+    }
+    .kintlevoseg-label .kl-title {
+      font-weight: 700;
+      color: #D94F04;
+      margin-right: 2px;
+    }
+    .kintlevoseg-label .kl-year {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 6px;
+      background: #fff;
+      border-radius: 3px;
+      font-size: 12px;
+      border: 1px solid #d0ecec;
+    }
+    .kintlevoseg-label .kl-year b {
+      color: #025259;
+    }
+
     /* Year multi-select */
     .year-filter { position: relative; }
     .year-btn {
@@ -504,6 +533,7 @@
         <button id="delRow" class="tbtn danger" title="Törlés" disabled>Törlés</button>
         <button id="hideRow" class="tbtn hide-toggle" title="Elrejtés / Megjelenítés" disabled>Elrejtés</button>
         <button id="statsBtn" class="tbtn stats" title="Statisztika">Statisztika</button>
+        <span id="kintlevoseg" class="kintlevoseg-label"></span>
       </div>
       <div class="toolbar-spacer"></div>
       <div class="toolbar-filters">
@@ -1097,7 +1127,30 @@
     tableWrap.appendChild(table);
 
     countLabel.textContent = `${filtered.length} / ${rows.length}`;
+    updateKintlevoseg();
     renderSelection();
+  }
+
+  const kintlevosegEl = document.getElementById('kintlevoseg');
+  function updateKintlevoseg() {
+    const paidByYear = {};
+    for (const r of rows) {
+      if (!r.paid) continue;
+      const yr = r.date ? new Date(r.date).getFullYear() : null;
+      if (!yr) continue;
+      if (!paidByYear[yr]) paidByYear[yr] = 0;
+      paidByYear[yr] += (Number(r.fee) || 0) - (Number(r.cost) || 0);
+    }
+    const years = Object.keys(paidByYear).map(Number).sort((a, b) => b - a);
+    if (years.length === 0) {
+      kintlevosegEl.innerHTML = '';
+      return;
+    }
+    let html = '<span class="kl-title">Kintlévőség:</span>';
+    for (const yr of years) {
+      html += `<span class="kl-year">${yr}: <b>${paidByYear[yr].toLocaleString('hu-HU')} Ft</b></span>`;
+    }
+    kintlevosegEl.innerHTML = html;
   }
 
   function renderSelection() {
