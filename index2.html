@@ -130,10 +130,10 @@
       padding: 6px 6px;
       text-align: center;
       white-space: nowrap;
-      border: 1px solid #01393e;
+      border: none;
       position: relative;
       user-select: none;
-      vertical-align: middle;
+      vertical-align: bottom;
     }
     thead th.col-chk {
       writing-mode: vertical-rl;
@@ -204,11 +204,6 @@
       transform: translate(-50%, -50%);
       line-height: 1;
     }
-    td.chk.ferc-on {
-      background: #fde0d0 !important;
-    }
-    td.chk.ferc-on input[type="checkbox"]:checked { background: #D94F04; border-color: #D94F04; }
-
     /* Checkbox group header colors */
     th.chk-g1 { background: #007172 !important; }
     th.chk-g2 { background: #F29325 !important; color: #fff; }
@@ -294,7 +289,7 @@
 
     /* Kintlévőség counter */
     .kintlevoseg-label {
-      display: inline-flex; align-items: center; gap: 6px;
+      display: inline-flex; align-items: center; gap: 20px;
       font-size: 13px; font-weight: 600;
       color: #025259;
       padding: 4px 10px;
@@ -1011,7 +1006,6 @@
           _lastGrp = col.group;
           const td = document.createElement('td');
           td.className = 'chk chk-' + col.group;
-          if (col.key === 'ferc' && r.ferc) td.classList.add('ferc-on');
           const chk = document.createElement('input');
           chk.type = 'checkbox';
           chk.checked = !!r[col.key];
@@ -1020,10 +1014,6 @@
             r.updated_at = nowIso();
             scheduleSave(r);
             quickToast('Mentve');
-            // Update ferc cell styling
-            if (col.key === 'ferc') {
-              td.classList.toggle('ferc-on', chk.checked);
-            }
             // Handle full/parkolo mutual exclusivity
             if (col.key === 'full' && chk.checked) {
               r.parkolo = false;
@@ -1133,22 +1123,22 @@
 
   const kintlevosegEl = document.getElementById('kintlevoseg');
   function updateKintlevoseg() {
-    const paidByYear = {};
+    const byYear = {};
     for (const r of rows) {
-      if (!r.paid) continue;
+      if (r.paid || !r.accepted) continue;
       const yr = r.date ? new Date(r.date).getFullYear() : null;
       if (!yr) continue;
-      if (!paidByYear[yr]) paidByYear[yr] = 0;
-      paidByYear[yr] += (Number(r.fee) || 0) - (Number(r.cost) || 0);
+      if (!byYear[yr]) byYear[yr] = 0;
+      byYear[yr] += (Number(r.fee) || 0) - (Number(r.cost) || 0);
     }
-    const years = Object.keys(paidByYear).map(Number).sort((a, b) => b - a);
+    const years = Object.keys(byYear).map(Number).filter(y => byYear[y] !== 0).sort((a, b) => b - a);
     if (years.length === 0) {
       kintlevosegEl.innerHTML = '';
       return;
     }
     let html = '<span class="kl-title">Kintlévőség:</span>';
     for (const yr of years) {
-      html += `<span class="kl-year">${yr}: <b>${paidByYear[yr].toLocaleString('hu-HU')} Ft</b></span>`;
+      html += `<span class="kl-year">${yr}: <b>${byYear[yr].toLocaleString('hu-HU')} Ft</b></span>`;
     }
     kintlevosegEl.innerHTML = html;
   }
