@@ -164,9 +164,13 @@
     }
     tbody tr { transition: background .1s; }
     tbody tr:hover { background: #e0f0f0 !important; }
-    tbody tr.selected { background: #fce4c8 !important; }
-    tbody tr.fullrow { background: #e6f2f2; }
-    tbody tr.parkrow { background: #f5f5f5; color: #999; }
+    /* Conditional row colors */
+    tbody tr.parkrow td { background: #e8e8e8 !important; color: #999; }
+    tbody tr.fullrow td { background: #d4edda !important; }
+    tbody tr.alertrow td { background: #f8d7da !important; }
+    /* Selected row */
+    tbody tr.selected td { background: #f5a623 !important; color: #222; }
+    tbody tr.selected td.col-gap { background: #fff !important; }
     tbody tr.hiddenrow { background: #F4E2DE; opacity: .6; }
 
     /* Checkbox cells */
@@ -249,9 +253,18 @@
       font-family: inherit;
       padding: 3px 3px;
       color: inherit;
+      pointer-events: none;
+    }
+    /* In selected rows: show faint borders, allow click */
+    tr.selected td .cell-input {
+      border: 1px dashed rgba(0,0,0,0.18);
+      border-radius: 3px;
+      pointer-events: auto;
+      cursor: text;
     }
     td .cell-input:focus {
-      background: #e6f2f2;
+      background: #fffbe6;
+      border: 1px solid #f5a623 !important;
       border-radius: 2px;
     }
     td .cell-input.name-input {
@@ -269,9 +282,6 @@
     td .cell-input.mobil-input {
       min-width: 110px;
     }
-    td .cell-input.munkaszam-input {
-      min-width: 80px;
-    }
 
     /* Column widths */
     .col-ho { width: 40px; text-align: center; }
@@ -280,7 +290,6 @@
     .col-chk { width: 30px; min-width: 30px; max-width: 30px; }
     .col-note { min-width: 300px; }
     .col-mobil { min-width: 170px; }
-    .col-munkaszam { min-width: 120px; }
     /* Hide/show button */
     .tbtn.hide-toggle { background: #fef3e2; border-color: #F29325; color: #D94F04; }
     .tbtn.hide-toggle:hover { background: #fde8d0; }
@@ -875,7 +884,6 @@
     });
     headers.push({ label: 'Megjegyzés', cls: 'col-note col-text' });
     headers.push({ label: 'Mobil', cls: 'col-mobil col-text' });
-    headers.push({ label: 'Munkaszám', cls: 'col-munkaszam col-text' });
     EXTRA_CHK.forEach(c => headers.push({ label: c.label, cls: 'col-chk' }));
 
     for (const h of headers) {
@@ -913,15 +921,18 @@
         const tr = document.createElement('tr');
         tr.dataset.id = r.id;
 
-        // Row state
-        if (r.id === selectedId) tr.classList.add('selected');
-        if (r.full) tr.classList.add('fullrow');
+        // Row state - priority: parkrow < fullrow < alertrow
         if (r.parkolo && !r.full) tr.classList.add('parkrow');
+        if (r.full) tr.classList.add('fullrow');
+        if (r.email_chk && r.utalas_chk && !r.beadva) tr.classList.add('alertrow');
         if (r.hidden) tr.classList.add('hiddenrow');
+        if (r.id === selectedId) tr.classList.add('selected');
 
-        // Click to select
+        // Click to select / deselect
         tr.addEventListener('click', (e) => {
-          if (e.target.closest('input')) return;
+          // Clicking input in already-selected row: let it focus, don't toggle
+          if (e.target.closest('.cell-input') && selectedId === r.id) return;
+          // Toggle selection
           selectedId = (selectedId === r.id) ? null : r.id;
           renderSelection();
         });
@@ -1025,7 +1036,7 @@
               render();
               return;
             }
-            if (col.key === 'full' || col.key === 'parkolo') {
+            if (col.key === 'full' || col.key === 'parkolo' || col.key === 'email_chk' || col.key === 'utalas_chk' || col.key === 'beadva') {
               render();
               return;
             }          });
@@ -1070,25 +1081,6 @@
         mobilInp.addEventListener('keydown', e => { if (e.key === 'Enter') mobilInp.blur(); });
         tdMobil.appendChild(mobilInp);
         tr.appendChild(tdMobil);
-
-        // === Munkaszám ===
-        const tdMsz = document.createElement('td');
-        tdMsz.className = 'col-munkaszam';
-        const mszInp = document.createElement('input');
-        mszInp.className = 'cell-input munkaszam-input';
-        mszInp.type = 'text';
-        mszInp.value = r.munkaszam || '';
-        mszInp.addEventListener('blur', () => {
-          if ((r.munkaszam ?? '') !== mszInp.value) {
-            r.munkaszam = mszInp.value;
-            r.updated_at = nowIso();
-            scheduleSave(r);
-            quickToast('Mentve');
-          }
-        });
-        mszInp.addEventListener('keydown', e => { if (e.key === 'Enter') mszInp.blur(); });
-        tdMsz.appendChild(mszInp);
-        tr.appendChild(tdMsz);
 
         // === Extra checkboxes (feltöltés, számla ment, számlás) ===
         for (const col of EXTRA_CHK) {
