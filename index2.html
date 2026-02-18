@@ -182,11 +182,12 @@
     }
     tbody tr { transition: background .1s; }
     tbody tr:hover { background: #e0f0f0 !important; }
-    /* Conditional row colors */
-    tbody tr.parkrow td { background: var(--c-row-park) !important; color: #999; }
-    tbody tr.fullrow td { background: var(--c-row-full) !important; }
-    tbody tr.alertrow td { background: var(--c-row-alert) !important; }
-    /* Selected row */
+    /* Conditional row colors — only name cell */
+    tbody tr.parkrow td.col-name { background: var(--c-row-park) !important; }
+    tbody tr.parkrow { color: #999; }
+    tbody tr.fullrow td.col-name { background: var(--c-row-full) !important; }
+    tbody tr.alertrow td.col-name { background: var(--c-row-alert) !important; }
+    /* Selected row — full row colored */
     tbody tr.selected td { background: var(--c-selection) !important; color: #222; }
     tbody tr.selected td.col-gap { background: #fff !important; }
     tbody tr.hiddenrow { background: var(--c-bg); opacity: .6; }
@@ -1026,17 +1027,6 @@
         if (r.hidden) tr.classList.add('hiddenrow');
         if (r.id === selectedId) tr.classList.add('selected');
 
-        // Click to select / deselect
-        tr.addEventListener('click', (e) => {
-          // Checkbox clicks: don't change selection
-          if (e.target.closest('input[type="checkbox"]')) return;
-          // Clicking input in already-selected row: let it focus, don't toggle
-          if (e.target.closest('.cell-input') && selectedId === r.id) return;
-          // Toggle selection
-          selectedId = (selectedId === r.id) ? null : r.id;
-          renderSelection();
-        });
-
         // === Hó ===
         const tdHo = document.createElement('td');
         tdHo.className = 'col-ho';
@@ -1046,6 +1036,7 @@
         // === Rövid név ===
         const tdName = document.createElement('td');
         tdName.className = 'col-name';
+        tdName.style.cursor = 'pointer';
         const nameInp = document.createElement('input');
         nameInp.className = 'cell-input name-input';
         nameInp.type = 'text';
@@ -1059,6 +1050,13 @@
           }
         });
         nameInp.addEventListener('keydown', e => { if (e.key === 'Enter') nameInp.blur(); });
+        // Click on name cell: select/deselect row
+        tdName.addEventListener('click', (e) => {
+          // If already selected and clicking the input, let it focus
+          if (e.target.closest('.cell-input') && selectedId === r.id) return;
+          selectedId = (selectedId === r.id) ? null : r.id;
+          renderSelection();
+        });
         tdName.appendChild(nameInp);
         tr.appendChild(tdName);
 
