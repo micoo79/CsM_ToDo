@@ -6,24 +6,42 @@
   <title>CsM ToDo</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    :root {
+      --c-primary: #025259;
+      --c-primary-light: #007172;
+      --c-accent: #F29325;
+      --c-danger: #D94F04;
+      --c-bg: #F4E2DE;
+      --c-selection: #f5a623;
+      --c-row-full: #d4edda;
+      --c-row-park: #e8e8e8;
+      --c-row-alert: #f8d7da;
+      --c-chk-g1: #007172;
+      --c-chk-g2: #F29325;
+      --c-chk-g3: #025259;
+      --c-chk-g4: #007172;
+      --c-chk-g5: #D94F04;
+      --c-chk-g6: #025259;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
       font-size: 13px;
-      background: #F4E2DE;
+      background: var(--c-bg);
       color: #222;
     }
 
     /* === LOGIN === */
     .login-screen {
       position: fixed; inset: 0;
-      background: #F4E2DE;
+      background: var(--c-bg);
       display: flex; align-items: center; justify-content: center;
       z-index: 9999;
     }
     .login-box {
       background: #fff;
-      border: 1px solid #007172;
+      border: 1px solid var(--c-primary-light);
       border-radius: 8px;
       padding: 32px 28px;
       width: 100%; max-width: 340px;
@@ -32,7 +50,7 @@
     .login-box h2 {
       font-size: 18px; font-weight: 700;
       text-align: center; margin-bottom: 6px;
-      color: #025259;
+      color: var(--c-primary);
     }
     .login-box .login-sub {
       text-align: center; color: #666; font-size: 12px; margin-bottom: 20px;
@@ -43,16 +61,16 @@
       color: #222; font-size: 13px;
       outline: none;
     }
-    .login-box input:focus { border-color: #007172; box-shadow: 0 0 0 2px rgba(0,113,114,.18); }
+    .login-box input:focus { border-color: var(--c-primary-light); box-shadow: 0 0 0 2px rgba(0,113,114,.18); }
     .login-box button {
       width: 100%; padding: 10px; margin-top: 4px;
-      background: #025259; border: none; border-radius: 4px;
+      background: var(--c-primary); border: none; border-radius: 4px;
       color: #fff; font-size: 13px; font-weight: 600;
       cursor: pointer;
     }
-    .login-box button:hover { background: #007172; }
+    .login-box button:hover { background: var(--c-primary-light); }
     .login-box button:disabled { opacity: .5; cursor: wait; }
-    .login-error { color: #D94F04; font-size: 12px; margin-top: 10px; text-align: center; }
+    .login-error { color: var(--c-danger); font-size: 12px; margin-top: 10px; text-align: center; }
 
     /* === APP LAYOUT === */
     .app { display: none; height: 100vh; flex-direction: column; }
@@ -61,7 +79,7 @@
     .topbar {
       display: flex; align-items: center; justify-content: space-between;
       padding: 6px 12px;
-      background: #025259;
+      background: var(--c-primary);
       color: #fff;
       flex-shrink: 0;
     }
@@ -84,17 +102,17 @@
       border-bottom: 1px solid #ddd;
       flex-shrink: 0;
     }
-    .toolbar-actions { display: flex; gap: 6px; }
+    .toolbar-actions { display: flex; gap: 6px; align-items: center; }
     .tbtn {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 6px 14px; border-radius: 4px;
       font-size: 16px; font-weight: 500;
-      background: #eaf6f6; border: 1px solid #007172;
-      color: #025259; cursor: pointer;
+      background: #eaf6f6; border: 1px solid var(--c-primary-light);
+      color: var(--c-primary); cursor: pointer;
     }
     .tbtn:hover { background: #d0ecec; }
     .tbtn:disabled { opacity: .4; cursor: not-allowed; }
-    .tbtn.danger { background: #fde8d8; border-color: #D94F04; color: #D94F04; }
+    .tbtn.danger { background: #fde8d8; border-color: var(--c-danger); color: var(--c-danger); }
     .tbtn.danger:hover { background: #fcd5bb; }
     .toolbar-spacer { flex: 1; }
     .toolbar-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -103,12 +121,12 @@
       padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;
       font-size: 16px; width: 250px; outline: none;
     }
-    .toolbar-filters input[type="text"]:focus { border-color: #007172; }
+    .toolbar-filters input[type="text"]:focus { border-color: var(--c-primary-light); }
     .toolbar-filters select {
       padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px;
       font-size: 16px; outline: none; background: #fff;
     }
-    .toolbar-filters input[type="checkbox"] { cursor: pointer; accent-color: #007172; }
+    .toolbar-filters input[type="checkbox"] { cursor: pointer; accent-color: var(--c-primary-light); }
 
     /* === TABLE === */
     .table-wrap {
@@ -123,7 +141,7 @@
     }
     thead { position: sticky; top: 0; z-index: 10; }
     thead th {
-      background: #025259;
+      background: var(--c-primary);
       color: #fff;
       font-size: 16px;
       font-weight: 600;
@@ -147,11 +165,11 @@
 
     /* Year separator */
     .year-row td {
-      background: #F4E2DE;
+      background: var(--c-bg);
       font-weight: 700;
       font-size: 20px;
       padding: 8px 14px;
-      color: #025259;
+      color: var(--c-primary);
       border: 1px solid #d0c8c6;
     }
 
@@ -165,13 +183,13 @@
     tbody tr { transition: background .1s; }
     tbody tr:hover { background: #e0f0f0 !important; }
     /* Conditional row colors */
-    tbody tr.parkrow td { background: #e8e8e8 !important; color: #999; }
-    tbody tr.fullrow td { background: #d4edda !important; }
-    tbody tr.alertrow td { background: #f8d7da !important; }
+    tbody tr.parkrow td { background: var(--c-row-park) !important; color: #999; }
+    tbody tr.fullrow td { background: var(--c-row-full) !important; }
+    tbody tr.alertrow td { background: var(--c-row-alert) !important; }
     /* Selected row */
-    tbody tr.selected td { background: #f5a623 !important; color: #222; }
+    tbody tr.selected td { background: var(--c-selection) !important; color: #222; }
     tbody tr.selected td.col-gap { background: #fff !important; }
-    tbody tr.hiddenrow { background: #F4E2DE; opacity: .6; }
+    tbody tr.hiddenrow { background: var(--c-bg); opacity: .6; }
 
     /* Checkbox cells */
     td.chk {
@@ -196,11 +214,11 @@
       position: relative;
     }
     td.chk input[type="checkbox"]:checked {
-      background: #007172;
-      border-color: #007172;
+      background: var(--c-primary-light);
+      border-color: var(--c-primary-light);
     }
     td.chk input[type="checkbox"]:checked::after {
-      content: '✓';
+      content: '\2713';
       position: absolute;
       color: #fff;
       font-size: 14px; font-weight: 700;
@@ -209,13 +227,13 @@
       line-height: 1;
     }
     /* Checkbox group header colors */
-    th.chk-g1 { background: #007172 !important; }
-    th.chk-g2 { background: #F29325 !important; color: #fff; }
-    th.chk-g3 { background: #025259 !important; }
-    th.chk-g4 { background: #007172 !important; }
-    th.chk-g5 { background: #D94F04 !important; }
-    th.chk-g6 { background: #025259 !important; }
-    /* Checkbox group cell backgrounds */
+    th.chk-g1 { background: var(--c-chk-g1) !important; }
+    th.chk-g2 { background: var(--c-chk-g2) !important; color: #fff; }
+    th.chk-g3 { background: var(--c-chk-g3) !important; }
+    th.chk-g4 { background: var(--c-chk-g4) !important; }
+    th.chk-g5 { background: var(--c-chk-g5) !important; }
+    th.chk-g6 { background: var(--c-chk-g6) !important; }
+    /* Checkbox group cell backgrounds — derived lighter */
     td.chk-g1 { background: #e6f2f2; }
     td.chk-g2 { background: #fef3e2; }
     td.chk-g3 { background: #eaf5f5; }
@@ -223,18 +241,12 @@
     td.chk-g5 { background: #fde8d8; }
     td.chk-g6 { background: #eaf5f5; }
     /* Group-specific checkbox colors */
-    td.chk-g1 input[type="checkbox"] { border-color: #a8d8d8; }
-    td.chk-g1 input[type="checkbox"]:checked { background: #007172; border-color: #007172; }
-    td.chk-g2 input[type="checkbox"] { border-color: #f5d5a8; }
-    td.chk-g2 input[type="checkbox"]:checked { background: #F29325; border-color: #F29325; }
-    td.chk-g3 input[type="checkbox"] { border-color: #a8d0d0; }
-    td.chk-g3 input[type="checkbox"]:checked { background: #025259; border-color: #025259; }
-    td.chk-g4 input[type="checkbox"] { border-color: #a8d8d8; }
-    td.chk-g4 input[type="checkbox"]:checked { background: #007172; border-color: #007172; }
-    td.chk-g5 input[type="checkbox"] { border-color: #f5c0a0; }
-    td.chk-g5 input[type="checkbox"]:checked { background: #D94F04; border-color: #D94F04; }
-    td.chk-g6 input[type="checkbox"] { border-color: #a8d0d0; }
-    td.chk-g6 input[type="checkbox"]:checked { background: #025259; border-color: #025259; }
+    td.chk-g1 input[type="checkbox"]:checked { background: var(--c-chk-g1); border-color: var(--c-chk-g1); }
+    td.chk-g2 input[type="checkbox"]:checked { background: var(--c-chk-g2); border-color: var(--c-chk-g2); }
+    td.chk-g3 input[type="checkbox"]:checked { background: var(--c-chk-g3); border-color: var(--c-chk-g3); }
+    td.chk-g4 input[type="checkbox"]:checked { background: var(--c-chk-g4); border-color: var(--c-chk-g4); }
+    td.chk-g5 input[type="checkbox"]:checked { background: var(--c-chk-g5); border-color: var(--c-chk-g5); }
+    td.chk-g6 input[type="checkbox"]:checked { background: var(--c-chk-g6); border-color: var(--c-chk-g6); }
     /* Group gap spacer */
     th.col-gap, td.col-gap {
       width: 35px; min-width: 35px; max-width: 35px;
@@ -264,7 +276,7 @@
     }
     td .cell-input:focus {
       background: #fffbe6;
-      border: 1px solid #f5a623 !important;
+      border: 1px solid var(--c-selection) !important;
       border-radius: 2px;
     }
     td .cell-input.name-input {
@@ -291,26 +303,26 @@
     .col-note { min-width: 300px; }
     .col-mobil { min-width: 170px; }
     /* Hide/show button */
-    .tbtn.hide-toggle { background: #fef3e2; border-color: #F29325; color: #D94F04; }
+    .tbtn.hide-toggle { background: #fef3e2; border-color: var(--c-accent); color: var(--c-danger); }
     .tbtn.hide-toggle:hover { background: #fde8d0; }
-    .tbtn.show-toggle { background: #eaf5f5; border-color: #007172; color: #025259; }
+    .tbtn.show-toggle { background: #eaf5f5; border-color: var(--c-primary-light); color: var(--c-primary); }
     .tbtn.show-toggle:hover { background: #d0ecec; }
 
     /* Kintlévőség counter */
     .kintlevoseg-label {
       display: inline-flex; align-items: center; gap: 20px;
       font-size: 13px; font-weight: 600;
-      color: #025259;
+      color: var(--c-primary);
       padding: 4px 10px;
       background: #eaf5f5;
-      border: 1px solid #007172;
+      border: 1px solid var(--c-primary-light);
       border-radius: 4px;
       white-space: nowrap;
       flex-wrap: wrap;
     }
     .kintlevoseg-label .kl-title {
       font-weight: 700;
-      color: #D94F04;
+      color: var(--c-danger);
       margin-right: 2px;
     }
     .kintlevoseg-label .kl-year {
@@ -322,7 +334,7 @@
       border: 1px solid #d0ecec;
     }
     .kintlevoseg-label .kl-year b {
-      color: #025259;
+      color: var(--c-primary);
     }
 
     /* Year multi-select */
@@ -333,12 +345,12 @@
       min-width: 110px; text-align: left;
       display: flex; align-items: center; justify-content: space-between; gap: 6px;
     }
-    .year-btn:hover { border-color: #007172; }
+    .year-btn:hover { border-color: var(--c-primary-light); }
     .year-btn .arrow { font-size: 9px; color: #999; }
     .year-dropdown {
       display: none;
       position: absolute; top: 100%; left: 0;
-      background: #fff; border: 1px solid #007172; border-radius: 4px;
+      background: #fff; border: 1px solid var(--c-primary-light); border-radius: 4px;
       box-shadow: 0 4px 12px rgba(2,82,89,.15);
       z-index: 100; min-width: 100px;
       padding: 4px 0;
@@ -351,13 +363,24 @@
       font-size: 16px; color: #222;
     }
     .year-dropdown label:hover { background: #e6f2f2; }
-    .year-dropdown input[type="checkbox"] { accent-color: #007172; cursor: pointer; }
+    .year-dropdown input[type="checkbox"] { accent-color: var(--c-primary-light); cursor: pointer; }
 
     /* Stats button */
-    .tbtn.stats { background: #F4E2DE; border-color: #D94F04; color: #D94F04; }
+    .tbtn.stats { background: var(--c-bg); border-color: var(--c-danger); color: var(--c-danger); }
     .tbtn.stats:hover { background: #f0d0c8; }
 
-    /* Stats modal */
+    /* Settings button */
+    .tbtn.settings-btn { background: #fff; border-color: var(--c-primary); color: var(--c-primary); font-size: 18px; padding: 4px 10px; }
+    .tbtn.settings-btn:hover { background: #eaf5f5; }
+
+    /* Stats modal + Settings modal shared overlay */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.4);
+      display: none; align-items: center; justify-content: center;
+      z-index: 300;
+    }
+    .modal-overlay.open { display: flex; }
     .stats-overlay {
       position: fixed; inset: 0;
       background: rgba(0,0,0,.4);
@@ -374,19 +397,19 @@
       display: flex; flex-direction: column;
       overflow: hidden;
     }
-    .stats-header {
+    .stats-header, .settings-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 20px;
-      background: #025259;
+      background: var(--c-primary);
       color: #fff;
       font-size: 15px; font-weight: 700;
     }
-    .stats-close {
+    .stats-close, .settings-close {
       background: none; border: none; color: #fff;
       font-size: 20px; cursor: pointer; line-height: 1;
       padding: 0 4px;
     }
-    .stats-close:hover { opacity: .7; }
+    .stats-close:hover, .settings-close:hover { opacity: .7; }
     .stats-body {
       padding: 20px;
       overflow-y: auto;
@@ -397,9 +420,9 @@
     .stats-year-block:last-child { margin-bottom: 0; }
     .stats-year-title {
       font-size: 14px; font-weight: 700;
-      color: #025259;
+      color: var(--c-primary);
       padding: 6px 0;
-      border-bottom: 2px solid #007172;
+      border-bottom: 2px solid var(--c-primary-light);
       margin-bottom: 10px;
     }
     .stats-table {
@@ -413,7 +436,7 @@
       background: #eaf5f5;
       border: 1px solid #b8d8d8;
       font-weight: 600;
-      color: #025259;
+      color: var(--c-primary);
     }
     .stats-table td {
       padding: 5px 8px;
@@ -427,7 +450,7 @@
     .stats-table tr.total-row td {
       background: #e6f2f2;
       font-weight: 700;
-      border-top: 2px solid #007172;
+      border-top: 2px solid var(--c-primary-light);
     }
     .stats-table tr.avg-row td {
       background: #fef3e2;
@@ -438,11 +461,11 @@
       margin-top: 16px;
       padding: 12px 16px;
       background: #e6f2f2;
-      border: 1px solid #007172;
+      border: 1px solid var(--c-primary-light);
       border-radius: 6px;
       font-size: 13px;
     }
-    .stats-grand b { color: #025259; }
+    .stats-grand b { color: var(--c-primary); }
 
     /* Chart */
     .stats-chart-wrap {
@@ -453,7 +476,7 @@
       border: 1px solid #e0dbd9;
     }
     .stats-chart-title {
-      font-size: 13px; font-weight: 700; color: #025259;
+      font-size: 13px; font-weight: 700; color: var(--c-primary);
       margin-bottom: 8px; text-align: center;
     }
     .stats-chart-canvas {
@@ -474,7 +497,7 @@
     .toast {
       position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
       padding: 6px 16px; border-radius: 20px;
-      background: #025259; color: #fff; font-size: 12px; font-weight: 500;
+      background: var(--c-primary); color: #fff; font-size: 12px; font-weight: 500;
       box-shadow: 0 2px 12px rgba(2,82,89,.35);
       opacity: 0; pointer-events: none;
       transition: opacity .2s;
@@ -489,10 +512,68 @@
     }
     .spinner {
       width: 16px; height: 16px;
-      border: 2px solid #ddd; border-top-color: #007172;
+      border: 2px solid #ddd; border-top-color: var(--c-primary-light);
       border-radius: 50%; animation: spin .6s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Settings modal */
+    .settings-modal {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.25);
+      width: 95%; max-width: 520px;
+      max-height: 85vh;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .settings-body {
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .settings-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row label {
+      flex: 1;
+      font-size: 14px; font-weight: 500; color: #333;
+    }
+    .settings-row .color-swatch {
+      width: 36px; height: 36px;
+      border: 2px solid #ccc; border-radius: 6px;
+      cursor: pointer; padding: 0;
+      overflow: hidden;
+    }
+    .settings-row .color-swatch::-webkit-color-swatch-wrapper { padding: 0; }
+    .settings-row .color-swatch::-webkit-color-swatch { border: none; }
+    .settings-row .hex-val {
+      width: 80px; font-family: monospace; font-size: 13px;
+      padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .settings-footer {
+      display: flex; justify-content: flex-end; gap: 10px;
+      padding: 12px 20px;
+      border-top: 1px solid #eee;
+    }
+    .settings-footer button {
+      padding: 8px 20px; border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .settings-footer .btn-ok {
+      background: var(--c-primary); border: none; color: #fff;
+    }
+    .settings-footer .btn-ok:hover { background: var(--c-primary-light); }
+    .settings-footer .btn-cancel {
+      background: #fff; border: 1px solid #ccc; color: #333;
+    }
+    .settings-footer .btn-cancel:hover { background: #f5f5f5; }
+    .settings-footer .btn-reset {
+      background: #fde8d8; border: 1px solid var(--c-danger); color: var(--c-danger); margin-right: auto;
+    }
+    .settings-footer .btn-reset:hover { background: #fcd5bb; }
 
     /* Responsive */
     @media (max-width: 768px) {
@@ -525,6 +606,7 @@
       </div>
       <div class="topbar-right">
         <span class="count-label" id="countLabel">0 / 0</span>
+        <button id="settingsBtn" class="tbtn settings-btn" title="Beállítások">&#9881;</button>
         <button id="logoutBtn" class="btn-logout">Kijelentkezés</button>
       </div>
     </div>
@@ -575,6 +657,22 @@
         <button class="stats-close" id="statsClose">&times;</button>
       </div>
       <div class="stats-body" id="statsBody"></div>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div class="modal-overlay" id="settingsOverlay">
+    <div class="settings-modal">
+      <div class="settings-header">
+        <span>Szinek beallitasai</span>
+        <button class="settings-close" id="settingsClose">&times;</button>
+      </div>
+      <div class="settings-body" id="settingsBody"></div>
+      <div class="settings-footer">
+        <button class="btn-reset" id="settingsReset">Alapertelmezett</button>
+        <button class="btn-cancel" id="settingsCancel">Megse</button>
+        <button class="btn-ok" id="settingsOk">OK</button>
+      </div>
     </div>
   </div>
 
@@ -930,6 +1028,8 @@
 
         // Click to select / deselect
         tr.addEventListener('click', (e) => {
+          // Checkbox clicks: don't change selection
+          if (e.target.closest('input[type="checkbox"]')) return;
           // Clicking input in already-selected row: let it focus, don't toggle
           if (e.target.closest('.cell-input') && selectedId === r.id) return;
           // Toggle selection
@@ -1505,6 +1605,138 @@
       qEl.value = '';
       render();
     }
+  });
+
+  // === COLOR SETTINGS ===
+  const COLOR_DEFS = [
+    { key: '--c-primary',       label: 'Fo szin (fejlec, gombok)',     def: '#025259' },
+    { key: '--c-primary-light', label: 'Masodlagos szin (kiemelés)',   def: '#007172' },
+    { key: '--c-accent',        label: 'Akcentus (narancs)',           def: '#F29325' },
+    { key: '--c-danger',        label: 'Figyelmezteto (piros)',        def: '#D94F04' },
+    { key: '--c-bg',            label: 'Hatter szin',                  def: '#F4E2DE' },
+    { key: '--c-selection',     label: 'Kijeloles szine',             def: '#f5a623' },
+    { key: '--c-row-full',      label: 'Full sor (zold)',              def: '#d4edda' },
+    { key: '--c-row-park',      label: 'Parkolo sor (szurke)',         def: '#e8e8e8' },
+    { key: '--c-row-alert',     label: 'Riasztas sor (piros)',         def: '#f8d7da' },
+    { key: '--c-chk-g1',       label: 'Pipa csoport 1 (Ajanlat)',     def: '#007172' },
+    { key: '--c-chk-g2',       label: 'Pipa csoport 2 (Terep)',       def: '#F29325' },
+    { key: '--c-chk-g3',       label: 'Pipa csoport 3 (Igenyelve)',   def: '#025259' },
+    { key: '--c-chk-g4',       label: 'Pipa csoport 4 (Beadva)',      def: '#007172' },
+    { key: '--c-chk-g5',       label: 'Pipa csoport 5 (Full)',        def: '#D94F04' },
+    { key: '--c-chk-g6',       label: 'Pipa csoport 6 (Parkolo)',     def: '#025259' },
+  ];
+
+  const STORAGE_KEY = 'csm-todo-colors';
+
+  function loadColors() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const obj = JSON.parse(saved);
+        for (const d of COLOR_DEFS) {
+          if (obj[d.key]) document.documentElement.style.setProperty(d.key, obj[d.key]);
+        }
+      }
+    } catch(_) {}
+  }
+
+  function saveColors(colorMap) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(colorMap));
+    for (const [k, v] of Object.entries(colorMap)) {
+      document.documentElement.style.setProperty(k, v);
+    }
+  }
+
+  function getCurrentColors() {
+    const cs = getComputedStyle(document.documentElement);
+    const m = {};
+    for (const d of COLOR_DEFS) {
+      m[d.key] = cs.getPropertyValue(d.key).trim() || d.def;
+    }
+    return m;
+  }
+
+  // Apply saved colors on load
+  loadColors();
+
+  // Settings modal
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsOverlay = document.getElementById('settingsOverlay');
+  const settingsClose = document.getElementById('settingsClose');
+  const settingsBody = document.getElementById('settingsBody');
+  const settingsOk = document.getElementById('settingsOk');
+  const settingsCancel = document.getElementById('settingsCancel');
+  const settingsReset = document.getElementById('settingsReset');
+
+  let _tempColors = {};
+
+  function openSettings() {
+    _tempColors = getCurrentColors();
+    let html = '';
+    for (const d of COLOR_DEFS) {
+      const val = _tempColors[d.key] || d.def;
+      html += `<div class="settings-row" data-key="${d.key}">
+        <label>${d.label}</label>
+        <input type="color" class="color-swatch" value="${val}" />
+        <input type="text" class="hex-val" value="${val}" maxlength="7" />
+      </div>`;
+    }
+    settingsBody.innerHTML = html;
+
+    // Wire up each row
+    settingsBody.querySelectorAll('.settings-row').forEach(row => {
+      const key = row.dataset.key;
+      const swatch = row.querySelector('.color-swatch');
+      const hex = row.querySelector('.hex-val');
+      swatch.addEventListener('input', () => {
+        hex.value = swatch.value;
+        _tempColors[key] = swatch.value;
+      });
+      hex.addEventListener('input', () => {
+        const v = hex.value.trim();
+        if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+          swatch.value = v;
+          _tempColors[key] = v;
+        }
+      });
+    });
+
+    settingsOverlay.classList.add('open');
+  }
+
+  function closeSettings() {
+    settingsOverlay.classList.remove('open');
+  }
+
+  settingsBtn.addEventListener('click', openSettings);
+  settingsClose.addEventListener('click', closeSettings);
+  settingsCancel.addEventListener('click', closeSettings);
+  settingsOverlay.addEventListener('click', (e) => {
+    if (e.target === settingsOverlay) closeSettings();
+  });
+
+  settingsOk.addEventListener('click', () => {
+    saveColors(_tempColors);
+    closeSettings();
+    quickToast('Szinek mentve');
+  });
+
+  settingsReset.addEventListener('click', () => {
+    const defaults = {};
+    for (const d of COLOR_DEFS) defaults[d.key] = d.def;
+    saveColors(defaults);
+    localStorage.removeItem(STORAGE_KEY);
+    // Refresh swatches in modal
+    settingsBody.querySelectorAll('.settings-row').forEach(row => {
+      const key = row.dataset.key;
+      const d = COLOR_DEFS.find(x => x.key === key);
+      if (d) {
+        row.querySelector('.color-swatch').value = d.def;
+        row.querySelector('.hex-val').value = d.def;
+        _tempColors[key] = d.def;
+      }
+    });
+    quickToast('Alapertelmezett szinek visszaallitva');
   });
 
   // === START ===
