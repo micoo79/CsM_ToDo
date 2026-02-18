@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>CsM ToDo</title>
-  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2/uicons-regular-rounded/css/uicons-regular-rounded.css">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2/uicons-bold-rounded/css/uicons-bold-rounded.css">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2/uicons-regular-straight/css/uicons-regular-straight.css">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2/uicons-solid-straight/css/uicons-solid-straight.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -81,10 +83,6 @@
     /* === APP LAYOUT === */
     .app { display: none; height: 100vh; flex-direction: column; }
 
-    /* Toolbar logout button */
-    .btn-toolbar-logout { background: #fde8d8; border-color: var(--c-danger); color: var(--c-danger); }
-    .btn-toolbar-logout:hover { background: #fcd5bb; }
-
     /* Toolbar */
     .toolbar {
       display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -93,18 +91,18 @@
       border-bottom: 1px solid #ddd;
       flex-shrink: 0;
     }
-    .toolbar-actions { display: flex; gap: 6px; align-items: center; }
+    .toolbar-actions { display: flex; gap: 4px; align-items: center; }
     .tbtn {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 6px 14px; border-radius: 4px;
-      font-size: 16px; font-weight: 500;
-      background: #eaf6f6; border: 1px solid var(--c-primary-light);
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 6px 10px; border-radius: 4px;
+      font-size: 18px;
+      background: none; border: none;
       color: var(--c-primary); cursor: pointer;
+      transition: color .2s, transform .2s;
     }
-    .tbtn:hover { background: #d0ecec; }
-    .tbtn:disabled { opacity: .4; cursor: not-allowed; }
-    .tbtn.danger { background: #fde8d8; border-color: var(--c-danger); color: var(--c-danger); }
-    .tbtn.danger:hover { background: #fcd5bb; }
+    .tbtn:hover { color: var(--c-accent); transform: scale(1.2); }
+    .tbtn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+    .tbtn:disabled:hover { color: var(--c-primary); transform: none; }
     .toolbar-spacer { flex: 1; }
     .toolbar-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .toolbar-filters label { font-size: 16px; color: #555; }
@@ -152,7 +150,7 @@
       line-height: 1;
       padding: 6px 4px;
     }
-    thead th.col-text { text-align: left; }
+    thead th.col-text { text-align: center; }
 
     /* Year separator */
     .year-row td {
@@ -297,11 +295,7 @@
     .col-chk { width: 30px; min-width: 30px; max-width: 30px; }
     .col-note { min-width: 300px; }
     .col-mobil { min-width: 170px; }
-    /* Hide/show button */
-    .tbtn.hide-toggle { background: #fef3e2; border-color: var(--c-accent); color: var(--c-danger); }
-    .tbtn.hide-toggle:hover { background: #fde8d0; }
-    .tbtn.show-toggle { background: #eaf5f5; border-color: var(--c-primary-light); color: var(--c-primary); }
-    .tbtn.show-toggle:hover { background: #d0ecec; }
+    /* Hide/show button — inherits base .tbtn styling */
 
     /* Kintlévőség counter */
     .kintlevoseg-label {
@@ -355,13 +349,7 @@
     .year-dropdown label:hover { background: #e6f2f2; }
     .year-dropdown input[type="checkbox"] { accent-color: var(--c-primary-light); cursor: pointer; }
 
-    /* Stats button */
-    .tbtn.stats { background: var(--c-bg); border-color: var(--c-danger); color: var(--c-danger); }
-    .tbtn.stats:hover { background: #f0d0c8; }
-
-    /* Settings button */
-    .tbtn.settings-btn { background: #fff; border-color: var(--c-primary); color: var(--c-primary); font-size: 18px; padding: 4px 10px; }
-    .tbtn.settings-btn:hover { background: #eaf5f5; }
+    /* Stats / Settings / Logout — all inherit base .tbtn */
 
     /* Stats modal + Settings modal shared overlay */
     .modal-overlay {
@@ -599,12 +587,12 @@
     <!-- Toolbar -->
     <div class="toolbar">
       <div class="toolbar-actions">
-        <button id="addRow" class="tbtn" title="Új sor"><i class="fi fi-rr-plus"></i></button>
-        <button id="delRow" class="tbtn danger" title="Törlés" disabled><i class="fi fi-rr-trash"></i></button>
-        <button id="hideRow" class="tbtn hide-toggle" title="Elrejtés / Megjelenítés" disabled><i class="fi fi-rr-eye-crossed"></i></button>
-        <button id="statsBtn" class="tbtn stats" title="Statisztika"><i class="fi fi-rr-chart-histogram"></i></button>
-        <button id="settingsBtn" class="tbtn settings-btn" title="Beállítások"><i class="fi fi-rr-settings"></i></button>
-        <button id="logoutBtn" class="tbtn btn-toolbar-logout" title="Kijelentkezés"><i class="fi fi-rr-sign-out-alt"></i></button>
+        <button id="addRow" class="tbtn" title="Új sor"><i class="fi fi-br-plus"></i></button>
+        <button id="delRow" class="tbtn" title="Törlés" disabled><i class="fi fi-rs-trash"></i></button>
+        <button id="hideRow" class="tbtn" title="Elrejtés / Megjelenítés" disabled><i class="fi fi-rs-crossed-eye"></i></button>
+        <button id="statsBtn" class="tbtn" title="Statisztika"><i class="fi fi-rs-chart-histogram"></i></button>
+        <button id="settingsBtn" class="tbtn" title="Beállítások"><i class="fi fi-rs-settings"></i></button>
+        <button id="logoutBtn" class="tbtn" title="Kijelentkezés"><i class="fi fi-ss-sign-out-alt"></i></button>
         <span id="kintlevoseg" class="kintlevoseg-label"></span>
       </div>
       <div class="toolbar-spacer"></div>
@@ -1002,7 +990,26 @@
         // === Hó ===
         const tdHo = document.createElement('td');
         tdHo.className = 'col-ho';
-        tdHo.textContent = r.month || '';
+        const hoInp = document.createElement('input');
+        hoInp.className = 'cell-input num-input';
+        hoInp.type = 'text';
+        hoInp.inputMode = 'numeric';
+        hoInp.style.minWidth = '30px';
+        hoInp.style.textAlign = 'center';
+        hoInp.value = r.month || '';
+        hoInp.addEventListener('blur', () => {
+          const v = parseInt(hoInp.value, 10);
+          const newMonth = (v >= 1 && v <= 12) ? v : null;
+          if ((r.month ?? null) !== newMonth) {
+            r.month = newMonth;
+            r.updated_at = nowIso();
+            scheduleSave(r);
+            quickToast('Mentve');
+          }
+          hoInp.value = r.month || '';
+        });
+        hoInp.addEventListener('keydown', e => { if (e.key === 'Enter') hoInp.blur(); });
+        tdHo.appendChild(hoInp);
         tr.appendChild(tdHo);
 
         // === Rövid név ===
@@ -1199,8 +1206,11 @@
       return;
     }
     let html = '<span class="kl-title">Kintlévőség:</span>';
+    const showYear = years.length > 1;
     for (const yr of years) {
-      html += `<span class="kl-year">${yr}: <b>${byYear[yr].toLocaleString('hu-HU')} Ft</b></span>`;
+      html += showYear
+        ? `<span class="kl-year">${yr}: <b>${byYear[yr].toLocaleString('hu-HU')} Ft</b></span>`
+        : `<span class="kl-year"><b>${byYear[yr].toLocaleString('hu-HU')} Ft</b></span>`;
     }
     kintlevosegEl.innerHTML = html;
   }
@@ -1215,17 +1225,14 @@
     if (selectedId) {
       const r = rows.find(x => x.id === selectedId);
       if (r && r.hidden) {
-        btnHide.innerHTML = '<i class="fi fi-rr-eye"></i>';
-        btnHide.className = 'tbtn show-toggle';
+        btnHide.innerHTML = '<i class="fi fi-rs-eye"></i>';
         btnHide.title = 'Megjelenítés';
       } else {
-        btnHide.innerHTML = '<i class="fi fi-rr-eye-crossed"></i>';
-        btnHide.className = 'tbtn hide-toggle';
+        btnHide.innerHTML = '<i class="fi fi-rs-crossed-eye"></i>';
         btnHide.title = 'Elrejtés';
       }
     } else {
-      btnHide.innerHTML = '<i class="fi fi-rr-eye-crossed"></i>';
-      btnHide.className = 'tbtn hide-toggle';
+      btnHide.innerHTML = '<i class="fi fi-rs-crossed-eye"></i>';
       btnHide.title = 'Elrejtés';
     }
   }
