@@ -13,15 +13,20 @@
       --c-danger: #D94F04;
       --c-bg: #F4E2DE;
       --c-selection: #f5a623;
+      --c-selection-text: #222222;
       --c-row-full: #d4edda;
+      --c-row-full-text: #222222;
       --c-row-park: #e8e8e8;
+      --c-row-park-text: #999999;
       --c-row-alert: #f8d7da;
+      --c-row-alert-text: #222222;
       --c-chk-g1: #007172;
       --c-chk-g2: #F29325;
       --c-chk-g3: #025259;
       --c-chk-g4: #007172;
       --c-chk-g5: #D94F04;
       --c-chk-g6: #025259;
+      --c-chk-mix: 50%;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -183,12 +188,12 @@
     tbody tr { transition: background .1s; }
     tbody tr:hover { background: #e0f0f0 !important; }
     /* Conditional row colors — only name cell */
-    tbody tr.parkrow td.col-name { background: var(--c-row-park) !important; }
-    tbody tr.parkrow { color: #999; }
-    tbody tr.fullrow td.col-name { background: var(--c-row-full) !important; }
-    tbody tr.alertrow td.col-name { background: var(--c-row-alert) !important; }
+    tbody tr.parkrow td.col-name { background: var(--c-row-park) !important; color: var(--c-row-park-text); }
+    tbody tr.parkrow { color: var(--c-row-park-text); }
+    tbody tr.fullrow td.col-name { background: var(--c-row-full) !important; color: var(--c-row-full-text); }
+    tbody tr.alertrow td.col-name { background: var(--c-row-alert) !important; color: var(--c-row-alert-text); }
     /* Selected row — full row colored */
-    tbody tr.selected td { background: var(--c-selection) !important; color: #222; }
+    tbody tr.selected td { background: var(--c-selection) !important; color: var(--c-selection-text); }
     tbody tr.selected td.col-gap { background: #fff !important; }
     tbody tr.hiddenrow { background: var(--c-bg); opacity: .6; }
 
@@ -234,13 +239,13 @@
     th.chk-g4 { background: var(--c-chk-g4) !important; }
     th.chk-g5 { background: var(--c-chk-g5) !important; }
     th.chk-g6 { background: var(--c-chk-g6) !important; }
-    /* Checkbox group cell backgrounds — header color at 50% opacity */
-    td.chk-g1 { background: color-mix(in srgb, var(--c-chk-g1) 50%, #fff); }
-    td.chk-g2 { background: color-mix(in srgb, var(--c-chk-g2) 50%, #fff); }
-    td.chk-g3 { background: color-mix(in srgb, var(--c-chk-g3) 50%, #fff); }
-    td.chk-g4 { background: color-mix(in srgb, var(--c-chk-g4) 50%, #fff); }
-    td.chk-g5 { background: color-mix(in srgb, var(--c-chk-g5) 50%, #fff); }
-    td.chk-g6 { background: color-mix(in srgb, var(--c-chk-g6) 50%, #fff); }
+    /* Checkbox group cell backgrounds — header color mixed with white */
+    td.chk-g1 { background: color-mix(in srgb, var(--c-chk-g1) var(--c-chk-mix), #fff); }
+    td.chk-g2 { background: color-mix(in srgb, var(--c-chk-g2) var(--c-chk-mix), #fff); }
+    td.chk-g3 { background: color-mix(in srgb, var(--c-chk-g3) var(--c-chk-mix), #fff); }
+    td.chk-g4 { background: color-mix(in srgb, var(--c-chk-g4) var(--c-chk-mix), #fff); }
+    td.chk-g5 { background: color-mix(in srgb, var(--c-chk-g5) var(--c-chk-mix), #fff); }
+    td.chk-g6 { background: color-mix(in srgb, var(--c-chk-g6) var(--c-chk-mix), #fff); }
     /* Group-specific checkbox colors */
     td.chk-g1 input[type="checkbox"]:checked { background: var(--c-chk-g1); border-color: var(--c-chk-g1); }
     td.chk-g2 input[type="checkbox"]:checked { background: var(--c-chk-g2); border-color: var(--c-chk-g2); }
@@ -554,6 +559,13 @@
       width: 80px; font-family: monospace; font-size: 13px;
       padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px;
       text-transform: uppercase;
+    }
+    .settings-row .pct-slider {
+      width: 120px; accent-color: var(--c-primary-light); cursor: pointer;
+    }
+    .settings-row .pct-val {
+      font-family: monospace; font-size: 13px; font-weight: 600;
+      min-width: 40px; text-align: right;
     }
     .settings-footer {
       display: flex; justify-content: flex-end; gap: 10px;
@@ -1583,21 +1595,26 @@
 
   // === COLOR SETTINGS ===
   const COLOR_DEFS = [
-    { key: '--c-primary',       label: 'Fo szin (fejlec, gombok)',     def: '#025259' },
-    { key: '--c-primary-light', label: 'Masodlagos szin (kiemelés)',   def: '#007172' },
-    { key: '--c-accent',        label: 'Akcentus (narancs)',           def: '#F29325' },
-    { key: '--c-danger',        label: 'Figyelmezteto (piros)',        def: '#D94F04' },
-    { key: '--c-bg',            label: 'Hatter szin',                  def: '#F4E2DE' },
-    { key: '--c-selection',     label: 'Kijeloles szine',             def: '#f5a623' },
-    { key: '--c-row-full',      label: 'Full sor (zold)',              def: '#d4edda' },
-    { key: '--c-row-park',      label: 'Parkolo sor (szurke)',         def: '#e8e8e8' },
-    { key: '--c-row-alert',     label: 'Riasztas sor (piros)',         def: '#f8d7da' },
-    { key: '--c-chk-g1',       label: 'Pipa csoport 1 (Ajanlat)',     def: '#007172' },
-    { key: '--c-chk-g2',       label: 'Pipa csoport 2 (Terep)',       def: '#F29325' },
-    { key: '--c-chk-g3',       label: 'Pipa csoport 3 (Igenyelve)',   def: '#025259' },
-    { key: '--c-chk-g4',       label: 'Pipa csoport 4 (Beadva)',      def: '#007172' },
-    { key: '--c-chk-g5',       label: 'Pipa csoport 5 (Full)',        def: '#D94F04' },
-    { key: '--c-chk-g6',       label: 'Pipa csoport 6 (Parkolo)',     def: '#025259' },
+    { key: '--c-primary',         label: 'Fo szin (fejlec, gombok)',           def: '#025259' },
+    { key: '--c-primary-light',   label: 'Masodlagos szin (kiemeles)',         def: '#007172' },
+    { key: '--c-accent',          label: 'Akcentus (narancs)',                 def: '#F29325' },
+    { key: '--c-danger',          label: 'Figyelmezteto (piros)',              def: '#D94F04' },
+    { key: '--c-bg',              label: 'Hatter szin',                        def: '#F4E2DE' },
+    { key: '--c-selection',       label: 'Kijeloles hatter',                   def: '#f5a623' },
+    { key: '--c-selection-text',  label: 'Kijeloles betuszin',                 def: '#222222' },
+    { key: '--c-row-full',        label: 'Full kiemeles hatter',               def: '#d4edda' },
+    { key: '--c-row-full-text',   label: 'Full kiemeles betuszin',             def: '#222222' },
+    { key: '--c-row-park',        label: 'Parkolo kiemeles hatter',            def: '#e8e8e8' },
+    { key: '--c-row-park-text',   label: 'Parkolo kiemeles betuszin',          def: '#999999' },
+    { key: '--c-row-alert',       label: 'Riasztas kiemeles hatter',           def: '#f8d7da' },
+    { key: '--c-row-alert-text',  label: 'Riasztas kiemeles betuszin',         def: '#222222' },
+    { key: '--c-chk-g1',         label: 'Pipa csoport 1 (Ajanlat)',           def: '#007172' },
+    { key: '--c-chk-g2',         label: 'Pipa csoport 2 (Terep)',             def: '#F29325' },
+    { key: '--c-chk-g3',         label: 'Pipa csoport 3 (Igenyelve)',         def: '#025259' },
+    { key: '--c-chk-g4',         label: 'Pipa csoport 4 (Beadva)',            def: '#007172' },
+    { key: '--c-chk-g5',         label: 'Pipa csoport 5 (Full)',              def: '#D94F04' },
+    { key: '--c-chk-g6',         label: 'Pipa csoport 6 (Parkolo)',           def: '#025259' },
+    { key: '--c-chk-mix',        label: 'Pipa cella szinerosseg (%)',          def: '50%', type: 'percent' },
   ];
 
   const STORAGE_KEY = 'csm-todo-colors';
@@ -1649,30 +1666,48 @@
     let html = '';
     for (const d of COLOR_DEFS) {
       const val = _tempColors[d.key] || d.def;
-      html += `<div class="settings-row" data-key="${d.key}">
-        <label>${d.label}</label>
-        <input type="color" class="color-swatch" value="${val}" />
-        <input type="text" class="hex-val" value="${val}" maxlength="7" />
-      </div>`;
+      if (d.type === 'percent') {
+        const num = parseInt(val) || 50;
+        html += `<div class="settings-row" data-key="${d.key}" data-type="percent">
+          <label>${d.label}</label>
+          <input type="range" class="pct-slider" min="5" max="100" value="${num}" />
+          <span class="pct-val">${num}%</span>
+        </div>`;
+      } else {
+        html += `<div class="settings-row" data-key="${d.key}">
+          <label>${d.label}</label>
+          <input type="color" class="color-swatch" value="${val}" />
+          <input type="text" class="hex-val" value="${val}" maxlength="7" />
+        </div>`;
+      }
     }
     settingsBody.innerHTML = html;
 
     // Wire up each row
     settingsBody.querySelectorAll('.settings-row').forEach(row => {
       const key = row.dataset.key;
-      const swatch = row.querySelector('.color-swatch');
-      const hex = row.querySelector('.hex-val');
-      swatch.addEventListener('input', () => {
-        hex.value = swatch.value;
-        _tempColors[key] = swatch.value;
-      });
-      hex.addEventListener('input', () => {
-        const v = hex.value.trim();
-        if (/^#[0-9a-fA-F]{6}$/.test(v)) {
-          swatch.value = v;
-          _tempColors[key] = v;
-        }
-      });
+      if (row.dataset.type === 'percent') {
+        const slider = row.querySelector('.pct-slider');
+        const lbl = row.querySelector('.pct-val');
+        slider.addEventListener('input', () => {
+          lbl.textContent = slider.value + '%';
+          _tempColors[key] = slider.value + '%';
+        });
+      } else {
+        const swatch = row.querySelector('.color-swatch');
+        const hex = row.querySelector('.hex-val');
+        swatch.addEventListener('input', () => {
+          hex.value = swatch.value;
+          _tempColors[key] = swatch.value;
+        });
+        hex.addEventListener('input', () => {
+          const v = hex.value.trim();
+          if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+            swatch.value = v;
+            _tempColors[key] = v;
+          }
+        });
+      }
     });
 
     settingsOverlay.classList.add('open');
@@ -1705,8 +1740,13 @@
       const key = row.dataset.key;
       const d = COLOR_DEFS.find(x => x.key === key);
       if (d) {
-        row.querySelector('.color-swatch').value = d.def;
-        row.querySelector('.hex-val').value = d.def;
+        if (d.type === 'percent') {
+          row.querySelector('.pct-slider').value = parseInt(d.def) || 50;
+          row.querySelector('.pct-val').textContent = d.def;
+        } else {
+          row.querySelector('.color-swatch').value = d.def;
+          row.querySelector('.hex-val').value = d.def;
+        }
         _tempColors[key] = d.def;
       }
     });
