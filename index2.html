@@ -1136,7 +1136,7 @@
               render();
               return;
             }
-            if (col.key === 'full' || col.key === 'parkolo' || col.key === 'email_chk' || col.key === 'utalas_chk' || col.key === 'beadva') {
+            if (col.key === 'full' || col.key === 'parkolo' || col.key === 'email_chk' || col.key === 'utalas_chk' || col.key === 'beadva' || col.key === 'paid' || col.key === 'accepted') {
               render();
               return;
             }          });
@@ -1257,6 +1257,16 @@
       btnHide.className = 'tbtn hide-toggle';
     }
   }
+
+  // Click outside a row to deselect
+  document.addEventListener('click', (e) => {
+    if (!selectedId) return;
+    if (e.target.closest('tbody tr[data-id]')) return;
+    if (e.target.closest('.toolbar') || e.target.closest('.topbar')) return;
+    if (e.target.closest('.modal-overlay') || e.target.closest('.stats-overlay')) return;
+    selectedId = null;
+    renderSelection();
+  });
 
   // === TOOLBAR ACTIONS ===
   btnAdd.addEventListener('click', () => {
