@@ -234,13 +234,13 @@
     th.chk-g4 { background: var(--c-chk-g4) !important; }
     th.chk-g5 { background: var(--c-chk-g5) !important; }
     th.chk-g6 { background: var(--c-chk-g6) !important; }
-    /* Checkbox group cell backgrounds — derived lighter */
-    td.chk-g1 { background: #e6f2f2; }
-    td.chk-g2 { background: #fef3e2; }
-    td.chk-g3 { background: #eaf5f5; }
-    td.chk-g4 { background: #e6f2f2; }
-    td.chk-g5 { background: #fde8d8; }
-    td.chk-g6 { background: #eaf5f5; }
+    /* Checkbox group cell backgrounds — header color at 50% opacity */
+    td.chk-g1 { background: color-mix(in srgb, var(--c-chk-g1) 50%, #fff); }
+    td.chk-g2 { background: color-mix(in srgb, var(--c-chk-g2) 50%, #fff); }
+    td.chk-g3 { background: color-mix(in srgb, var(--c-chk-g3) 50%, #fff); }
+    td.chk-g4 { background: color-mix(in srgb, var(--c-chk-g4) 50%, #fff); }
+    td.chk-g5 { background: color-mix(in srgb, var(--c-chk-g5) 50%, #fff); }
+    td.chk-g6 { background: color-mix(in srgb, var(--c-chk-g6) 50%, #fff); }
     /* Group-specific checkbox colors */
     td.chk-g1 input[type="checkbox"]:checked { background: var(--c-chk-g1); border-color: var(--c-chk-g1); }
     td.chk-g2 input[type="checkbox"]:checked { background: var(--c-chk-g2); border-color: var(--c-chk-g2); }
@@ -250,7 +250,7 @@
     td.chk-g6 input[type="checkbox"]:checked { background: var(--c-chk-g6); border-color: var(--c-chk-g6); }
     /* Group gap spacer */
     th.col-gap, td.col-gap {
-      width: 35px; min-width: 35px; max-width: 35px;
+      width: 15px; min-width: 15px; max-width: 15px;
       background: #fff !important;
       border: none !important;
       padding: 0;
@@ -624,21 +624,11 @@
       </div>
       <div class="toolbar-spacer"></div>
       <div class="toolbar-filters">
-        <label>Keresés:</label>
-        <input id="q" type="text" placeholder="Név / megjegyzés / mobil…" autocomplete="off" />
         <label>Év:</label>
         <div class="year-filter" id="yearFilter">
           <button type="button" class="year-btn" id="yearBtn">Mind <span class="arrow">&#9660;</span></button>
           <div class="year-dropdown" id="yearDropdown"></div>
         </div>
-        <label>Hónap:</label>
-        <select id="month">
-          <option value="">Mind</option>
-          <option value="1">Jan</option><option value="2">Feb</option><option value="3">Már</option>
-          <option value="4">Ápr</option><option value="5">Máj</option><option value="6">Jún</option>
-          <option value="7">Júl</option><option value="8">Aug</option><option value="9">Sze</option>
-          <option value="10">Okt</option><option value="11">Nov</option><option value="12">Dec</option>
-        </select>
         <label>Rejtett:</label>
         <input id="showHidden" type="checkbox" />
       </div>
@@ -1590,20 +1580,6 @@
       ctx.fillText(String(labels[i]), x + barW / 2, H - padBottom + 18);
     }
   }
-
-  // Keyboard shortcuts
-  window.addEventListener('keydown', (e) => {
-    if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
-      const t = document.activeElement?.tagName;
-      if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
-      e.preventDefault();
-      qEl?.focus();
-    }
-    if (e.key === 'Escape' && document.activeElement === qEl) {
-      qEl.value = '';
-      render();
-    }
-  });
 
   // === COLOR SETTINGS ===
   const COLOR_DEFS = [
