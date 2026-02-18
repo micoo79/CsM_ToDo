@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>CsM ToDo</title>
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2/uicons-regular-rounded/css/uicons-regular-rounded.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -80,24 +81,9 @@
     /* === APP LAYOUT === */
     .app { display: none; height: 100vh; flex-direction: column; }
 
-    /* Top bar */
-    .topbar {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 6px 12px;
-      background: var(--c-primary);
-      color: #fff;
-      flex-shrink: 0;
-    }
-    .topbar-left { display: flex; align-items: center; gap: 16px; }
-    .topbar-brand { font-size: 15px; font-weight: 700; }
-    .topbar-right { display: flex; align-items: center; gap: 10px; }
-    .btn-logout {
-      background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25);
-      color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 11px;
-      cursor: pointer;
-    }
-    .btn-logout:hover { background: rgba(255,255,255,.22); }
-    .count-label { font-size: 11px; opacity: .8; }
+    /* Toolbar logout button */
+    .btn-toolbar-logout { background: #fde8d8; border-color: var(--c-danger); color: var(--c-danger); }
+    .btn-toolbar-logout:hover { background: #fcd5bb; }
 
     /* Toolbar */
     .toolbar {
@@ -289,6 +275,9 @@
       font-weight: 600;
       min-width: 160px;
     }
+    td .cell-input.name-input.name-extrabold {
+      font-weight: 900;
+    }
     td .cell-input.num-input {
       text-align: right;
       min-width: 70px;
@@ -317,27 +306,22 @@
     /* Kintlévőség counter */
     .kintlevoseg-label {
       display: inline-flex; align-items: center; gap: 20px;
-      font-size: 13px; font-weight: 600;
+      font-size: 16px; font-weight: 600;
       color: var(--c-primary);
       padding: 4px 10px;
-      background: #eaf5f5;
-      border: 1px solid var(--c-primary-light);
-      border-radius: 4px;
       white-space: nowrap;
       flex-wrap: wrap;
     }
     .kintlevoseg-label .kl-title {
       font-weight: 700;
+      font-size: 16px;
       color: var(--c-danger);
       margin-right: 2px;
     }
     .kintlevoseg-label .kl-year {
       display: inline-flex; align-items: center; gap: 3px;
       padding: 2px 6px;
-      background: #fff;
-      border-radius: 3px;
-      font-size: 12px;
-      border: 1px solid #d0ecec;
+      font-size: 15px;
     }
     .kintlevoseg-label .kl-year b {
       color: var(--c-primary);
@@ -612,26 +596,15 @@
 
   <!-- APP -->
   <div class="app" id="mainApp">
-    <!-- Top bar -->
-    <div class="topbar">
-      <div class="topbar-left">
-        <div class="topbar-brand">CsM ToDo</div>
-      </div>
-      <div class="topbar-right">
-        <span class="count-label" id="countLabel">0 / 0</span>
-        <button id="settingsBtn" class="tbtn settings-btn" title="Beállítások">&#9881;</button>
-        <button id="logoutBtn" class="btn-logout">Kijelentkezés</button>
-      </div>
-    </div>
-
     <!-- Toolbar -->
     <div class="toolbar">
       <div class="toolbar-actions">
-        <button id="addRow" class="tbtn" title="Új sor">+ Új</button>
-        <button id="dupRow" class="tbtn" title="Duplikál" disabled>Duplikál</button>
-        <button id="delRow" class="tbtn danger" title="Törlés" disabled>Törlés</button>
-        <button id="hideRow" class="tbtn hide-toggle" title="Elrejtés / Megjelenítés" disabled>Elrejtés</button>
-        <button id="statsBtn" class="tbtn stats" title="Statisztika">Statisztika</button>
+        <button id="addRow" class="tbtn" title="Új sor"><i class="fi fi-rr-plus"></i></button>
+        <button id="delRow" class="tbtn danger" title="Törlés" disabled><i class="fi fi-rr-trash"></i></button>
+        <button id="hideRow" class="tbtn hide-toggle" title="Elrejtés / Megjelenítés" disabled><i class="fi fi-rr-eye-crossed"></i></button>
+        <button id="statsBtn" class="tbtn stats" title="Statisztika"><i class="fi fi-rr-chart-histogram"></i></button>
+        <button id="settingsBtn" class="tbtn settings-btn" title="Beállítások"><i class="fi fi-rr-settings"></i></button>
+        <button id="logoutBtn" class="tbtn btn-toolbar-logout" title="Kijelentkezés"><i class="fi fi-rr-sign-out-alt"></i></button>
         <span id="kintlevoseg" class="kintlevoseg-label"></span>
       </div>
       <div class="toolbar-spacer"></div>
@@ -815,8 +788,6 @@
   const qEl = document.getElementById('q');
   const monthEl = document.getElementById('month');
   const showHiddenEl = document.getElementById('showHidden');
-  const countLabel = document.getElementById('countLabel');
-
   // Year multi-select
   const yearBtn = document.getElementById('yearBtn');
   const yearDropdown = document.getElementById('yearDropdown');
@@ -844,7 +815,6 @@
   }
 
   const btnAdd = document.getElementById('addRow');
-  const btnDup = document.getElementById('dupRow');
   const btnDel = document.getElementById('delRow');
   const btnHide = document.getElementById('hideRow');
   const toast = document.getElementById('toast');
@@ -1040,7 +1010,8 @@
         tdName.className = 'col-name';
         tdName.style.cursor = 'pointer';
         const nameInp = document.createElement('input');
-        nameInp.className = 'cell-input name-input';
+        const allSixChecked = r.offer_sent && r.accepted && r.terep && r.igenyelve && r.utalva && r.kiadva;
+        nameInp.className = 'cell-input name-input' + (allSixChecked ? ' name-extrabold' : '');
         nameInp.type = 'text';
         nameInp.value = r.short_name || '';
         nameInp.addEventListener('blur', () => {
@@ -1136,7 +1107,7 @@
               render();
               return;
             }
-            if (col.key === 'full' || col.key === 'parkolo' || col.key === 'email_chk' || col.key === 'utalas_chk' || col.key === 'beadva' || col.key === 'paid' || col.key === 'accepted') {
+            if (col.key === 'full' || col.key === 'parkolo' || col.key === 'email_chk' || col.key === 'utalas_chk' || col.key === 'beadva' || col.key === 'paid' || col.key === 'accepted' || col.key === 'offer_sent' || col.key === 'terep' || col.key === 'igenyelve' || col.key === 'utalva' || col.key === 'kiadva') {
               render();
               return;
             }          });
@@ -1208,7 +1179,6 @@
     tableWrap.innerHTML = '';
     tableWrap.appendChild(table);
 
-    countLabel.textContent = `${filtered.length} / ${rows.length}`;
     updateKintlevoseg();
     renderSelection();
   }
@@ -1239,22 +1209,24 @@
     document.querySelectorAll('tbody tr[data-id]').forEach(tr => {
       tr.classList.toggle('selected', tr.dataset.id === selectedId);
     });
-    btnDup.disabled = !selectedId;
     btnDel.disabled = !selectedId;
     btnHide.disabled = !selectedId;
     // Update hide button label
     if (selectedId) {
       const r = rows.find(x => x.id === selectedId);
       if (r && r.hidden) {
-        btnHide.textContent = 'Megjelenít';
+        btnHide.innerHTML = '<i class="fi fi-rr-eye"></i>';
         btnHide.className = 'tbtn show-toggle';
+        btnHide.title = 'Megjelenítés';
       } else {
-        btnHide.textContent = 'Elrejtés';
+        btnHide.innerHTML = '<i class="fi fi-rr-eye-crossed"></i>';
         btnHide.className = 'tbtn hide-toggle';
+        btnHide.title = 'Elrejtés';
       }
     } else {
-      btnHide.textContent = 'Elrejtés';
+      btnHide.innerHTML = '<i class="fi fi-rr-eye-crossed"></i>';
       btnHide.className = 'tbtn hide-toggle';
+      btnHide.title = 'Elrejtés';
     }
   }
 
@@ -1262,7 +1234,7 @@
   document.addEventListener('click', (e) => {
     if (!selectedId) return;
     if (e.target.closest('tbody tr[data-id]')) return;
-    if (e.target.closest('.toolbar') || e.target.closest('.topbar')) return;
+    if (e.target.closest('.toolbar')) return;
     if (e.target.closest('.modal-overlay') || e.target.closest('.stats-overlay')) return;
     selectedId = null;
     renderSelection();
@@ -1296,20 +1268,6 @@
       const newRow = document.querySelector(`tr[data-id="${r.id}"] .name-input`);
       if (newRow) newRow.focus();
     }, 50);
-  });
-
-  btnDup.addEventListener('click', () => {
-    if (!selectedId) return;
-    const p = rows.find(r => r.id === selectedId);
-    if (!p) return;
-    const copy = JSON.parse(JSON.stringify(p));
-    copy.id = uid();
-    copy.updated_at = nowIso();
-    rows.unshift(copy);
-    selectedId = copy.id;
-    scheduleSave(copy);
-    quickToast('Duplikálva');
-    render();
   });
 
   btnDel.addEventListener('click', async () => {
