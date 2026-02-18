@@ -1629,23 +1629,46 @@
 
   const STORAGE_KEY = 'csm-todo-colors';
 
-  function loadColors() {
+  function applyColorMap(obj) {
+    for (const d of COLOR_DEFS) {
+      if (obj[d.key]) document.documentElement.style.setProperty(d.key, obj[d.key]);
+    }
+  }
+
+  function loadColorsFromCache() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const obj = JSON.parse(saved);
-        for (const d of COLOR_DEFS) {
-          if (obj[d.key]) document.documentElement.style.setProperty(d.key, obj[d.key]);
-        }
-      }
+      if (saved) applyColorMap(JSON.parse(saved));
     } catch(_) {}
   }
 
-  function saveColors(colorMap) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(colorMap));
+  async function loadColorsFromDb() {
+    try {
+      const { data: { user } } = await db.auth.getUser();
+      if (!user) return;
+      const { data, error } = await db.from('user_settings').select('colors').eq('user_id', user.id).single();
+      if (error || !data?.colors) return;
+      applyColorMap(data.colors);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data.colors));
+    } catch(_) {}
+  }
+
+  async function saveColors(colorMap) {
+    // Apply immediately
     for (const [k, v] of Object.entries(colorMap)) {
       document.documentElement.style.setProperty(k, v);
     }
+    // Cache locally
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(colorMap));
+    // Persist to DB
+    try {
+      const { data: { user } } = await db.auth.getUser();
+      if (!user) return;
+      await db.from('user_settings').upsert({
+        user_id: user.id,
+        colors: colorMap
+      }, { onConflict: 'user_id' });
+    } catch(_) {}
   }
 
   function getCurrentColors() {
@@ -1657,8 +1680,8 @@
     return m;
   }
 
-  // Apply saved colors on load
-  loadColors();
+  // Apply cached colors immediately (DB load happens in startApp)
+  loadColorsFromCache();
 
   // Settings modal
   const settingsBtn = document.getElementById('settingsBtn');
@@ -1734,17 +1757,16 @@
     if (e.target === settingsOverlay) closeSettings();
   });
 
-  settingsOk.addEventListener('click', () => {
-    saveColors(_tempColors);
+  settingsOk.addEventListener('click', async () => {
+    await saveColors(_tempColors);
     closeSettings();
     quickToast('Szinek mentve');
   });
 
-  settingsReset.addEventListener('click', () => {
+  settingsReset.addEventListener('click', async () => {
     const defaults = {};
     for (const d of COLOR_DEFS) defaults[d.key] = d.def;
-    saveColors(defaults);
-    localStorage.removeItem(STORAGE_KEY);
+    await saveColors(defaults);
     // Refresh swatches in modal
     settingsBody.querySelectorAll('.settings-row').forEach(row => {
       const key = row.dataset.key;
@@ -1766,7 +1788,7 @@
   // === START ===
   async function startApp() {
     tableWrap.innerHTML = '<div class="loading-msg"><div class="spinner"></div> Betöltés...</div>';
-    const [loaded] = await Promise.all([loadRowsFromSupabase(), loadYearFilterFromDb()]);
+    const [loaded] = await Promise.all([loadRowsFromSupabase(), loadYearFilterFromDb(), loadColorsFromDb()]);
     rows = (loaded && loaded.length) ? loaded : [];
     populateYearFilter();
     updateYearBtnLabel();
