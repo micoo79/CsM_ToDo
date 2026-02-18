@@ -563,6 +563,11 @@
     /* Responsive */
     @media (max-width: 768px) {
       .toolbar-filters input[type="text"] { width: 120px; }
+      .mob-hide { display: none !important; }
+      thead th.col-chk { height: 90px; }
+      td .cell-input { font-size: 14px; }
+      td .cell-input.name-input { min-width: 120px; }
+      td .cell-input.mobil-input { min-width: 90px; }
     }
   </style>
 </head>
@@ -816,25 +821,25 @@
 
   // === CHECKBOX COLUMNS ===
   const CHK_COLS = [
-    { key: 'offer_sent',  label: 'Ajánlat',   group: 'g1' },
+    { key: 'offer_sent',  label: 'Ajánlat',   group: 'g1', mobHide: true },
     { key: 'accepted',    label: 'Elfogadva',  group: 'g1' },
     { key: 'paid',        label: 'Fizetve',    group: 'g1' },
-    { key: 'terep',       label: 'Terep',      group: 'g2' },
-    { key: 'ferc',        label: 'Férc',       group: 'g2' },
+    { key: 'terep',       label: 'Terep',      group: 'g2', mobHide: true },
+    { key: 'ferc',        label: 'Férc',       group: 'g2', mobHide: true },
     { key: 'igenyelve',   label: 'igényelve',  group: 'g3' },
     { key: 'utalva',      label: 'utalva',     group: 'g3' },
     { key: 'kiadva',      label: 'kiadva',     group: 'g3' },
-    { key: 'beadva',      label: 'Beadva',     group: 'g4' },
-    { key: 'email_chk',   label: 'email',      group: 'g4' },
-    { key: 'utalas_chk',  label: 'Utalás',     group: 'g4' },
-    { key: 'full',        label: 'FULL', saveKey: 'is_full', group: 'g5' },
-    { key: 'parkolo',     label: 'parkoló',    group: 'g6' },
+    { key: 'beadva',      label: 'Beadva',     group: 'g4', mobHide: true },
+    { key: 'email_chk',   label: 'email',      group: 'g4', mobHide: true },
+    { key: 'utalas_chk',  label: 'Utalás',     group: 'g4', mobHide: true },
+    { key: 'full',        label: 'FULL', saveKey: 'is_full', group: 'g5', mobHide: true },
+    { key: 'parkolo',     label: 'parkoló',    group: 'g6', mobHide: true },
   ];
 
   const EXTRA_CHK = [
     { key: 'feltoltes',   label: 'feltöltés' },
-    { key: 'szamla_ment', label: 'számla ment' },
-    { key: 'szamlas',     label: 'Számlás' },
+    { key: 'szamla_ment', label: 'számla ment', mobHide: true },
+    { key: 'szamlas',     label: 'Számlás', mobHide: true },
   ];
 
   // === FILTERS ===
@@ -928,30 +933,30 @@
     const thead = document.createElement('thead');
     const hRow = document.createElement('tr');
     const headers = [
-      { label: 'Hó', cls: 'col-ho' },
+      { label: 'Hó', cls: 'col-ho', mobHide: true },
       { label: 'Rövid név', cls: 'col-name col-text' },
-      { label: 'Munkadíj', cls: 'col-num' },
-      { label: 'Költség', cls: 'col-num' },
+      { label: 'Munkadíj', cls: 'col-num', mobHide: true },
+      { label: 'Költség', cls: 'col-num', mobHide: true },
     ];
     let lastGroup = null;
     CHK_COLS.forEach(c => {
       if (lastGroup && c.group !== lastGroup) {
-        headers.push({ spacer: true, cls: 'col-gap' });
+        headers.push({ spacer: true, cls: 'col-gap', mobHide: true });
       }
-      headers.push({ label: c.label, cls: 'col-chk chk-' + c.group });
+      headers.push({ label: c.label, cls: 'col-chk chk-' + c.group, mobHide: c.mobHide });
       lastGroup = c.group;
     });
-    headers.push({ label: 'Megjegyzés', cls: 'col-note col-text' });
+    headers.push({ label: 'Megjegyzés', cls: 'col-note col-text', mobHide: true });
     headers.push({ label: 'Mobil', cls: 'col-mobil col-text' });
-    EXTRA_CHK.forEach(c => headers.push({ label: c.label, cls: 'col-chk' }));
+    EXTRA_CHK.forEach(c => headers.push({ label: c.label, cls: 'col-chk', mobHide: c.mobHide }));
 
     for (const h of headers) {
       const th = document.createElement('th');
       if (h.spacer) {
-        th.className = 'col-gap';
+        th.className = 'col-gap' + (h.mobHide ? ' mob-hide' : '');
       } else {
         th.textContent = h.label;
-        th.className = h.cls || '';
+        th.className = (h.cls || '') + (h.mobHide ? ' mob-hide' : '');
       }
       hRow.appendChild(th);
     }
@@ -989,7 +994,7 @@
 
         // === Hó ===
         const tdHo = document.createElement('td');
-        tdHo.className = 'col-ho';
+        tdHo.className = 'col-ho mob-hide';
         const hoInp = document.createElement('input');
         hoInp.className = 'cell-input num-input';
         hoInp.type = 'text';
@@ -1042,7 +1047,7 @@
 
         // === Munkadíj ===
         const tdFee = document.createElement('td');
-        tdFee.className = 'col-num';
+        tdFee.className = 'col-num mob-hide';
         const feeInp = document.createElement('input');
         feeInp.className = 'cell-input num-input';
         feeInp.type = 'text';
@@ -1064,7 +1069,7 @@
 
         // === Költség ===
         const tdCost = document.createElement('td');
-        tdCost.className = 'col-num';
+        tdCost.className = 'col-num mob-hide';
         const costInp = document.createElement('input');
         costInp.className = 'cell-input num-input';
         costInp.type = 'text';
@@ -1089,12 +1094,12 @@
         for (const col of CHK_COLS) {
           if (_lastGrp && col.group !== _lastGrp) {
             const spacer = document.createElement('td');
-            spacer.className = 'col-gap';
+            spacer.className = 'col-gap mob-hide';
             tr.appendChild(spacer);
           }
           _lastGrp = col.group;
           const td = document.createElement('td');
-          td.className = 'chk chk-' + col.group;
+          td.className = 'chk chk-' + col.group + (col.mobHide ? ' mob-hide' : '');
           const chk = document.createElement('input');
           chk.type = 'checkbox';
           chk.checked = !!r[col.key];
@@ -1124,7 +1129,7 @@
 
         // === Megjegyzés ===
         const tdNote = document.createElement('td');
-        tdNote.className = 'col-note';
+        tdNote.className = 'col-note mob-hide';
         const noteInp = document.createElement('input');
         noteInp.className = 'cell-input note-input';
         noteInp.type = 'text';
@@ -1163,7 +1168,7 @@
         // === Extra checkboxes (feltöltés, számla ment, számlás) ===
         for (const col of EXTRA_CHK) {
           const td = document.createElement('td');
-          td.className = 'chk';
+          td.className = 'chk' + (col.mobHide ? ' mob-hide' : '');
           const chk = document.createElement('input');
           chk.type = 'checkbox';
           chk.checked = !!r[col.key];
