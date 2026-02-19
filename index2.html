@@ -239,7 +239,7 @@
     td.chk-g6 input[type="checkbox"]:checked { background: var(--c-chk-g6); border-color: var(--c-chk-g6); }
     /* Group gap spacer */
     th.col-gap, td.col-gap {
-      width: 15px; min-width: 15px; max-width: 15px;
+      width: 5px; min-width: 5px; max-width: 5px;
       background: #fff !important;
       border: none !important;
       padding: 0;
@@ -283,9 +283,11 @@
     }
     td .cell-input.note-input {
       min-width: 200px;
+      font-size: 11px;
     }
     td .cell-input.mobil-input {
       min-width: 110px;
+      font-size: 11px;
     }
 
     /* Column widths */
@@ -971,14 +973,17 @@
     const totalCols = headers.length;
 
     for (const yr of sortedYears) {
-      // Year separator row
-      const yrRow = document.createElement('tr');
-      yrRow.className = 'year-row';
-      const yrTd = document.createElement('td');
-      yrTd.colSpan = totalCols;
-      yrTd.textContent = yr;
-      yrRow.appendChild(yrTd);
-      tbody.appendChild(yrRow);
+      // Year separator row (hide if current year)
+      const currentYear = new Date().getFullYear();
+      if (String(yr) !== String(currentYear)) {
+        const yrRow = document.createElement('tr');
+        yrRow.className = 'year-row';
+        const yrTd = document.createElement('td');
+        yrTd.colSpan = totalCols;
+        yrTd.textContent = yr;
+        yrRow.appendChild(yrTd);
+        tbody.appendChild(yrRow);
+      }
 
       // Sort rows within year by month
       const yearRows = byYear[yr].sort((a,b) => (a.month||0) - (b.month||0));
