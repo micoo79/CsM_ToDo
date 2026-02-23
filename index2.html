@@ -180,6 +180,9 @@
     tbody tr.selected td { background: var(--c-selection) !important; color: var(--c-selection-text); }
     tbody tr.selected td.col-gap { background: #fff !important; }
     tbody tr.hiddenrow { background: var(--c-bg); opacity: .6; }
+    /* Vizsgálat alatt — green font, default bg, overrides everything */
+    tbody tr td.col-name-vizsg { background: transparent !important; color: var(--c-row-full) !important; }
+    tbody tr.selected td.col-name-vizsg { background: var(--c-selection) !important; color: var(--c-row-full) !important; }
 
     /* Checkbox cells */
     td.chk {
@@ -836,6 +839,7 @@
     { key: 'beadva',      label: 'Beadva',     group: 'g4', mobHide: true },
     { key: 'email_chk',   label: 'email',      group: 'g4', mobHide: true },
     { key: 'utalas_chk',  label: 'Utalás',     group: 'g4', mobHide: true },
+    { key: 'vizsgalat_alatt', label: 'Vizsgálat alatt', group: 'g2', mobHide: true },
     { key: 'full',        label: 'FULL', saveKey: 'is_full', group: 'g5', mobHide: true },
     { key: 'parkolo',     label: 'parkoló',    group: 'g6', mobHide: true },
   ];
@@ -1026,7 +1030,7 @@
 
         // === Rövid név ===
         const tdName = document.createElement('td');
-        tdName.className = 'col-name';
+        tdName.className = 'col-name' + (r.vizsgalat_alatt ? ' col-name-vizsg' : '');
         tdName.style.cursor = 'pointer';
         const nameInp = document.createElement('input');
         const allSixChecked = r.offer_sent && r.accepted && r.terep && r.igenyelve && r.utalva && r.kiadva;
@@ -1126,7 +1130,7 @@
               render();
               return;
             }
-            if (col.key === 'full' || col.key === 'parkolo' || col.key === 'email_chk' || col.key === 'utalas_chk' || col.key === 'beadva' || col.key === 'paid' || col.key === 'accepted' || col.key === 'offer_sent' || col.key === 'terep' || col.key === 'igenyelve' || col.key === 'utalva' || col.key === 'kiadva') {
+            if (col.key === 'full' || col.key === 'parkolo' || col.key === 'email_chk' || col.key === 'utalas_chk' || col.key === 'beadva' || col.key === 'paid' || col.key === 'accepted' || col.key === 'offer_sent' || col.key === 'terep' || col.key === 'igenyelve' || col.key === 'utalva' || col.key === 'kiadva' || col.key === 'vizsgalat_alatt') {
               render();
               return;
             }          });
@@ -1271,6 +1275,7 @@
       terep:false, ferc:false,
       igenyelve:false, utalva:false, kiadva:false,
       beadva:false, email_chk:false, utalas_chk:false,
+      vizsgalat_alatt:false,
       full:false, parkolo:false, hidden:false,
       note:'', mobil:'',
       feltoltes:false, szamla_ment:false,
