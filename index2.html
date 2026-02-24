@@ -565,6 +565,39 @@
     }
     .settings-footer .btn-reset:hover { background: #fcd5bb; }
 
+    /* Drag & drop */
+    tbody tr[draggable="true"] {
+      cursor: grab;
+    }
+    tbody tr[draggable="true"]:active {
+      cursor: grabbing;
+    }
+    tbody tr.drag-over-above {
+      border-top: 3px solid var(--c-accent) !important;
+    }
+    tbody tr.drag-over-below {
+      border-bottom: 3px solid var(--c-accent) !important;
+    }
+    tbody tr.dragging {
+      opacity: 0.4;
+      background: #f0f0f0 !important;
+    }
+    .col-drag {
+      width: 28px; min-width: 28px; max-width: 28px;
+      text-align: center;
+      color: #bbb;
+      font-size: 14px;
+      cursor: grab;
+      user-select: none;
+      padding: 2px 4px !important;
+    }
+    .col-drag:active { cursor: grabbing; }
+    .col-drag:hover { color: var(--c-primary); }
+    thead th.col-drag-head {
+      width: 28px; min-width: 28px; max-width: 28px;
+      padding: 6px 2px;
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .toolbar-filters input[type="text"] { width: 120px; }
@@ -743,7 +776,7 @@
   // === SUPABASE DATA ===
   async function loadRowsFromSupabase() {
     try {
-      const { data, error } = await db.from('jobs').select('*').order('date', { ascending: false });
+      const { data, error } = await db.from('jobs').select('*').order('sort_order', { ascending: true, nullsFirst: false }).order('date', { ascending: false });
       if (error) throw error;
       return data.map(r => ({ ...r, month: getMonth(r), full: r.is_full, kint: r.is_kint }));
     } catch(e) { console.error('Supabase load error:', e); return null; }
@@ -778,6 +811,49 @@
       }
       _dirtyRows.clear();
     }, 500);
+  }
+
+  // === DRAG & DROP STATE ===
+  let _dragId = null;
+
+  function reorderRow(fromId, toId, insertBefore) {
+    const fromIdx = rows.findIndex(r => r.id === fromId);
+    const toIdx = rows.findIndex(r => r.id === toId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const [moved] = rows.splice(fromIdx, 1);
+    let newIdx = rows.findIndex(r => r.id === toId);
+    if (!insertBefore) newIdx++;
+    rows.splice(newIdx, 0, moved);
+    // Recalc sort_order for all rows
+    recalcSortOrder();
+    render();
+    quickToast('Sorrend mentve');
+  }
+
+  function recalcSortOrder() {
+    for (let i = 0; i < rows.length; i++) {
+      rows[i].sort_order = i;
+    }
+    // Batch save sort_order for all rows
+    saveSortOrderBatch();
+  }
+
+  let _sortSaveTimer = null;
+  function saveSortOrderBatch() {
+    clearTimeout(_sortSaveTimer);
+    _sortSaveTimer = setTimeout(async () => {
+      try {
+        // Save in chunks of 50
+        for (let i = 0; i < rows.length; i += 50) {
+          const batch = rows.slice(i, i + 50).map(r => ({
+            id: r.id,
+            sort_order: r.sort_order,
+            updated_at: new Date().toISOString()
+          }));
+          await db.from('jobs').upsert(batch, { onConflict: 'id' });
+        }
+      } catch(e) { console.error('Sort order save error:', e); }
+    }, 300);
   }
 
   // === STATE ===
@@ -941,6 +1017,7 @@
     const thead = document.createElement('thead');
     const hRow = document.createElement('tr');
     const headers = [
+      { label: '⠿', cls: 'col-drag-head' },
       { label: 'Hó', cls: 'col-ho', mobHide: true },
       { label: 'Rövid név', cls: 'col-name col-text' },
       { label: 'Munkadíj', cls: 'col-num', mobHide: true },
@@ -989,8 +1066,13 @@
         tbody.appendChild(yrRow);
       }
 
-      // Sort rows within year by month
-      const yearRows = byYear[yr].sort((a,b) => (a.month||0) - (b.month||0));
+      // Sort rows within year by sort_order (fallback to month)
+      const yearRows = byYear[yr].sort((a,b) => {
+        const sa = a.sort_order ?? 999999;
+        const sb = b.sort_order ?? 999999;
+        if (sa !== sb) return sa - sb;
+        return (a.month||0) - (b.month||0);
+      });
 
       for (const r of yearRows) {
         const tr = document.createElement('tr');
@@ -1002,6 +1084,53 @@
         if (r.email_chk && r.utalas_chk && !r.beadva) tr.classList.add('alertrow');
         if (r.hidden) tr.classList.add('hiddenrow');
         if (r.id === selectedId) tr.classList.add('selected');
+
+        // === Drag handle ===
+        tr.draggable = false;
+        const tdDrag = document.createElement('td');
+        tdDrag.className = 'col-drag';
+        tdDrag.textContent = '⠿';
+        tdDrag.addEventListener('mousedown', () => { tr.draggable = true; });
+        tdDrag.addEventListener('mouseup', () => { tr.draggable = false; });
+        tr.addEventListener('dragstart', (e) => {
+          if (!tr.draggable) { e.preventDefault(); return; }
+          _dragId = r.id;
+          tr.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', r.id);
+        });
+        tr.addEventListener('dragend', () => {
+          tr.draggable = false;
+          tr.classList.remove('dragging');
+          document.querySelectorAll('.drag-over-above,.drag-over-below').forEach(el => el.classList.remove('drag-over-above','drag-over-below'));
+          _dragId = null;
+        });
+        tr.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          const rect = tr.getBoundingClientRect();
+          const midY = rect.top + rect.height / 2;
+          tr.classList.remove('drag-over-above', 'drag-over-below');
+          if (e.clientY < midY) {
+            tr.classList.add('drag-over-above');
+          } else {
+            tr.classList.add('drag-over-below');
+          }
+        });
+        tr.addEventListener('dragleave', () => {
+          tr.classList.remove('drag-over-above', 'drag-over-below');
+        });
+        tr.addEventListener('drop', (e) => {
+          e.preventDefault();
+          tr.classList.remove('drag-over-above', 'drag-over-below');
+          const fromId = e.dataTransfer.getData('text/plain');
+          if (!fromId || fromId === r.id) return;
+          const rect = tr.getBoundingClientRect();
+          const midY = rect.top + rect.height / 2;
+          const insertBefore = e.clientY < midY;
+          reorderRow(fromId, r.id, insertBefore);
+        });
+        tr.appendChild(tdDrag);
 
         // === Hó ===
         const tdHo = document.createElement('td');
@@ -1280,9 +1409,15 @@
       note:'', mobil:'',
       feltoltes:false, szamla_ment:false,
       munkaszam:'', kint:false, col_1420000:null, szamlas:false,
+      sort_order: 0,
       updated_at: nowIso()
     };
     rows.unshift(r);
+    // Shift all other sort_orders down
+    for (let i = 1; i < rows.length; i++) {
+      rows[i].sort_order = i;
+    }
+    saveSortOrderBatch();
     selectedId = r.id;
     scheduleSave(r);
     quickToast('Új sor');
