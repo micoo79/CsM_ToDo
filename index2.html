@@ -598,10 +598,36 @@
       padding: 6px 2px;
     }
 
+    /* Phone column (mobile only) */
+    .col-phone { display: none; width: 32px; min-width: 32px; max-width: 32px; text-align: center; padding: 2px; }
+    .col-phone a { color: #27ae60; font-size: 18px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+    .col-phone a:active { transform: scale(1.3); }
+    thead th.col-phone-head { display: none; width: 32px; min-width: 32px; max-width: 32px; padding: 2px; }
+
+    /* Note modal (mobile) */
+    .note-modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+      z-index: 2000; align-items: center; justify-content: center;
+    }
+    .note-modal-overlay.open { display: flex; }
+    .note-modal {
+      background: #fff; border-radius: 10px; padding: 18px 22px; max-width: 90vw; min-width: 260px;
+      max-height: 60vh; overflow-y: auto; box-shadow: 0 8px 30px rgba(0,0,0,.25);
+    }
+    .note-modal-title { font-weight: 700; font-size: 15px; margin-bottom: 10px; color: var(--c-primary); }
+    .note-modal-text { font-size: 14px; line-height: 1.5; white-space: pre-wrap; color: #333; min-height: 30px; }
+    .note-modal-close {
+      margin-top: 14px; display: block; width: 100%; padding: 8px; border: none;
+      background: var(--c-primary); color: #fff; border-radius: 6px; font-size: 14px; cursor: pointer;
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .toolbar-filters input[type="text"] { width: 120px; }
       .mob-hide { display: none !important; }
+      .col-drag, thead th.col-drag-head { display: none !important; }
+      .col-phone { display: table-cell; }
+      thead th.col-phone-head { display: table-cell; }
       .toolbar-filters { display: none !important; }
       .kintlevoseg-label { display: none !important; }
       thead th.col-chk { height: 90px; }
@@ -682,6 +708,15 @@
         <button class="btn-cancel" id="settingsCancel">Megse</button>
         <button class="btn-ok" id="settingsOk">OK</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Note modal (mobile double-tap) -->
+  <div class="note-modal-overlay" id="noteOverlay">
+    <div class="note-modal">
+      <div class="note-modal-title" id="noteModalTitle"></div>
+      <div class="note-modal-text" id="noteModalText"></div>
+      <button class="note-modal-close" id="noteModalClose">Bezárás</button>
     </div>
   </div>
 
@@ -771,6 +806,26 @@
     const cleaned = t.replace(/\s/g,'').replace(/,/g,'.');
     const x = Number(cleaned);
     return Number.isFinite(x) ? x : null;
+  }
+
+  function extractPhone(s) {
+    if (!s) return null;
+    const digits = s.replace(/[^\d+]/g, '');
+    if (digits.replace(/\+/g, '').length >= 7) return digits;
+    return null;
+  }
+
+  // Note modal (mobile double-tap)
+  const noteOverlay = document.getElementById('noteOverlay');
+  const noteModalTitle = document.getElementById('noteModalTitle');
+  const noteModalText = document.getElementById('noteModalText');
+  document.getElementById('noteModalClose').addEventListener('click', () => noteOverlay.classList.remove('open'));
+  noteOverlay.addEventListener('click', (e) => { if (e.target === noteOverlay) noteOverlay.classList.remove('open'); });
+
+  function showNoteModal(name, note) {
+    noteModalTitle.textContent = name || 'Megjegyzés';
+    noteModalText.textContent = note || '(nincs megjegyzés)';
+    noteOverlay.classList.add('open');
   }
 
   // === SUPABASE DATA ===
@@ -1017,6 +1072,7 @@
     const thead = document.createElement('thead');
     const hRow = document.createElement('tr');
     const headers = [
+      { label: '', cls: 'col-phone-head', phoneCol: true },
       { label: '⠿', cls: 'col-drag-head' },
       { label: 'Hó', cls: 'col-ho', mobHide: true },
       { label: 'Rövid név', cls: 'col-name col-text' },
@@ -1084,6 +1140,18 @@
         if (r.email_chk && r.utalas_chk && !r.beadva) tr.classList.add('alertrow');
         if (r.hidden) tr.classList.add('hiddenrow');
         if (r.id === selectedId) tr.classList.add('selected');
+
+        // === Phone (mobile only) ===
+        const tdPhone = document.createElement('td');
+        tdPhone.className = 'col-phone';
+        const phoneNum = extractPhone(r.mobil);
+        if (phoneNum) {
+          const phoneLink = document.createElement('a');
+          phoneLink.href = 'tel:' + phoneNum;
+          phoneLink.innerHTML = '<i class="fi fi-ss-phone-call"></i>';
+          tdPhone.appendChild(phoneLink);
+        }
+        tr.appendChild(tdPhone);
 
         // === Drag handle ===
         tr.draggable = false;
@@ -1181,6 +1249,18 @@
           if (e.target.closest('.cell-input') && selectedId === r.id) return;
           selectedId = (selectedId === r.id) ? null : r.id;
           renderSelection();
+        });
+        // Double-tap on name: show note modal
+        let _lastTap = 0;
+        tdName.addEventListener('touchend', (e) => {
+          const now = Date.now();
+          if (now - _lastTap < 350) {
+            e.preventDefault();
+            showNoteModal(r.short_name, r.note);
+            _lastTap = 0;
+          } else {
+            _lastTap = now;
+          }
         });
         tdName.appendChild(nameInp);
         tr.appendChild(tdName);
