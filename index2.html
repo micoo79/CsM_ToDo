@@ -604,6 +604,31 @@
     .col-phone a:active { transform: scale(1.3); }
     thead th.col-phone-head { display: none; width: 32px; min-width: 32px; max-width: 32px; padding: 2px; }
 
+    /* Email link column */
+    .col-email { width: 34px; min-width: 34px; max-width: 34px; text-align: center; padding: 2px; position: relative; }
+    .col-email a { color: var(--c-primary); font-size: 16px; text-decoration: none; }
+    .col-email a:hover { color: var(--c-accent); }
+    .col-email .email-empty { cursor: pointer; width: 100%; height: 100%; min-height: 22px; }
+
+    /* Email popover */
+    .email-popover {
+      display: none; position: absolute; z-index: 1500;
+      top: 100%; left: 50%; transform: translateX(-50%);
+      background: #fff; border: 1px solid #ccc; border-radius: 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.18); padding: 8px 10px;
+      min-width: 220px; white-space: nowrap;
+    }
+    .email-popover.open { display: flex; gap: 6px; align-items: center; }
+    .email-popover input {
+      flex: 1; border: 1px solid #bbb; border-radius: 4px; padding: 4px 6px;
+      font-size: 12px; min-width: 160px; outline: none;
+    }
+    .email-popover input:focus { border-color: var(--c-primary); }
+    .email-popover button {
+      border: none; background: var(--c-primary); color: #fff;
+      border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer;
+    }
+
     /* Note modal (mobile) */
     .note-modal-overlay {
       display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
@@ -1089,6 +1114,7 @@
     });
     headers.push({ label: 'Megjegyzés', cls: 'col-note col-text', mobHide: true });
     headers.push({ label: 'Mobil', cls: 'col-mobil col-text' });
+    headers.push({ label: '✉', cls: 'col-email' });
     EXTRA_CHK.forEach(c => headers.push({ label: c.label, cls: 'col-chk', mobHide: c.mobHide }));
 
     for (const h of headers) {
@@ -1385,6 +1411,60 @@
         tdMobil.appendChild(mobilInp);
         tr.appendChild(tdMobil);
 
+        // === Email link ===
+        const tdEmail = document.createElement('td');
+        tdEmail.className = 'col-email';
+        if (r.email_link) {
+          const emailA = document.createElement('a');
+          emailA.href = r.email_link;
+          emailA.target = '_blank';
+          emailA.rel = 'noopener';
+          emailA.innerHTML = '<i class="fi fi-ss-envelope"></i>';
+          emailA.addEventListener('click', (e) => e.stopPropagation());
+          tdEmail.appendChild(emailA);
+        } else {
+          const emptyDiv = document.createElement('div');
+          emptyDiv.className = 'email-empty';
+          tdEmail.appendChild(emptyDiv);
+        }
+        // Popover for editing
+        const emailPop = document.createElement('div');
+        emailPop.className = 'email-popover';
+        const emailInp = document.createElement('input');
+        emailInp.type = 'text';
+        emailInp.placeholder = 'Link beillesztése...';
+        emailInp.value = r.email_link || '';
+        const emailOk = document.createElement('button');
+        emailOk.textContent = 'OK';
+        emailOk.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const val = emailInp.value.trim();
+          r.email_link = val || null;
+          r.updated_at = nowIso();
+          scheduleSave(r);
+          quickToast('Mentve');
+          emailPop.classList.remove('open');
+          render();
+        });
+        emailInp.addEventListener('keydown', (e) => {
+          e.stopPropagation();
+          if (e.key === 'Enter') emailOk.click();
+          if (e.key === 'Escape') emailPop.classList.remove('open');
+        });
+        emailInp.addEventListener('click', (e) => e.stopPropagation());
+        emailPop.appendChild(emailInp);
+        emailPop.appendChild(emailOk);
+        tdEmail.appendChild(emailPop);
+        tdEmail.addEventListener('click', (e) => {
+          if (e.target.closest('a')) return;
+          e.stopPropagation();
+          document.querySelectorAll('.email-popover.open').forEach(p => p.classList.remove('open'));
+          emailPop.classList.add('open');
+          emailInp.value = r.email_link || '';
+          setTimeout(() => emailInp.focus(), 0);
+        });
+        tr.appendChild(tdEmail);
+
         // === Extra checkboxes (feltöltés, számla ment, számlás) ===
         for (const col of EXTRA_CHK) {
           const td = document.createElement('td');
@@ -1464,10 +1544,14 @@
 
   // Click outside a row to deselect
   document.addEventListener('click', (e) => {
+    // Close email popovers
+    if (!e.target.closest('.col-email')) {
+      document.querySelectorAll('.email-popover.open').forEach(p => p.classList.remove('open'));
+    }
     if (!selectedId) return;
     if (e.target.closest('tbody tr[data-id]')) return;
     if (e.target.closest('.toolbar')) return;
-    if (e.target.closest('.modal-overlay') || e.target.closest('.stats-overlay')) return;
+    if (e.target.closest('.modal-overlay') || e.target.closest('.stats-overlay') || e.target.closest('.note-modal-overlay')) return;
     selectedId = null;
     renderSelection();
   });
