@@ -440,6 +440,12 @@
       font-weight: 600;
       font-style: italic;
     }
+    .stats-table .proj-col {
+      color: #aaa;
+    }
+    .stats-table thead .proj-col {
+      color: #999;
+    }
     .stats-grand {
       margin-top: 16px;
       padding: 12px 16px;
@@ -1653,6 +1659,9 @@
     // Only count rows where paid === true
     const paidRows = rows.filter(r => r.paid);
 
+    // Conditional rows: offer_sent=true, accepted=true, paid=false
+    const conditionalRows = rows.filter(r => r.offer_sent && r.accepted && !r.paid);
+
     // Group by year from live data
     const byYear = {};
     for (const r of paidRows) {
@@ -1662,8 +1671,17 @@
       byYear[yr].push(r);
     }
 
+    // Group conditional rows by year
+    const condByYear = {};
+    for (const r of conditionalRows) {
+      const yr = r.date ? new Date(r.date).getFullYear() : null;
+      if (!yr) continue;
+      if (!condByYear[yr]) condByYear[yr] = [];
+      condByYear[yr].push(r);
+    }
+
     // Merge historic years (only add years not already in live data)
-    const allYears = new Set([...Object.keys(byYear), ...Object.keys(historicData).map(String)]);
+    const allYears = new Set([...Object.keys(byYear), ...Object.keys(condByYear), ...Object.keys(historicData).map(String)]);
     const sortedYears = [...allYears].sort((a,b) => Number(b) - Number(a));
 
     const monthNames = ['','Jan','Feb','Már','Ápr','Máj','Jún','Júl','Aug','Sze','Okt','Nov','Dec'];
@@ -1671,20 +1689,32 @@
     let grandTotal = 0;
     let grandCount = 0;
     const chartData = {}; // year -> total for chart
+    const chartDataProj = {}; // year -> projected total for chart
 
     for (const yr of sortedYears) {
       const yrNum = Number(yr);
+      const showProj = yrNum >= 2026;
       const hasLive = byYear[yr] && byYear[yr].length > 0;
+      const hasCond = condByYear[yr] && condByYear[yr].length > 0;
       const hasHistoric = historicData[yrNum];
 
       // Build month data from live rows
       const byMonth = {};
+      const condByMonth = {};
       if (hasLive) {
         for (const r of byYear[yr]) {
           const m = r.month || 0;
           if (!byMonth[m]) byMonth[m] = { count: 0, sum: 0 };
           byMonth[m].count++;
           byMonth[m].sum += (Number(r.fee) || 0) - (Number(r.cost) || 0);
+        }
+      }
+      if (hasCond) {
+        for (const r of condByYear[yr]) {
+          const m = r.month || 0;
+          if (!condByMonth[m]) condByMonth[m] = { count: 0, sum: 0 };
+          condByMonth[m].count++;
+          condByMonth[m].sum += (Number(r.fee) || 0) - (Number(r.cost) || 0);
         }
       }
 
@@ -1698,49 +1728,70 @@
         }
       }
 
-      const sortedMonths = Object.keys(byMonth).map(Number).sort((a,b) => a - b);
+      const allMonths = new Set([...Object.keys(byMonth).map(Number), ...Object.keys(condByMonth).map(Number)]);
+      const sortedMonths = [...allMonths].sort((a,b) => a - b);
 
       let yearTotal = 0;
       let yearCount = 0;
+      let yearCondTotal = 0;
+      let yearCondCount = 0;
       let monthRows = '';
 
       for (const m of sortedMonths) {
-        const md = byMonth[m];
+        const md = byMonth[m] || { count: 0, sum: 0 };
+        const cd = condByMonth[m] || { count: 0, sum: 0 };
         yearTotal += md.sum;
         yearCount += md.count;
+        yearCondTotal += cd.sum;
+        yearCondCount += cd.count;
         const label = m >= 1 && m <= 12 ? monthNames[m] : 'Ismeretlen';
         const countLabel = md.historic ? '-' : `${md.count} db`;
+        const projCell = showProj
+          ? `<td class="num proj-col">${(md.sum + cd.sum).toLocaleString('hu-HU')} Ft</td>`
+          : '';
         monthRows += `<tr>
           <td>${label}</td>
           <td class="num">${countLabel}</td>
           <td class="num">${md.sum.toLocaleString('hu-HU')} Ft</td>
+          ${projCell}
         </tr>`;
       }
 
       const activeMonthCount = sortedMonths.length;
       const monthlyAvg = activeMonthCount > 0 ? Math.round(yearTotal / activeMonthCount) : 0;
+      const projMonthlyAvg = activeMonthCount > 0 ? Math.round((yearTotal + yearCondTotal) / activeMonthCount) : 0;
       grandTotal += yearTotal;
       grandCount += yearCount;
       chartData[yrNum] = yearTotal;
+      chartDataProj[yrNum] = showProj ? yearTotal + yearCondTotal : yearTotal;
 
-      const yearTag = hasHistoric && !hasLive ? `${yr} <span style="font-size:0.7em;color:#888;">(archív)</span>` : yr;
+      const yearTag = hasHistoric && !hasLive && !hasCond ? `${yr} <span style="font-size:0.7em;color:#888;">(archív)</span>` : yr;
       const countLabel = hasHistoric && !hasLive ? '-' : `${yearCount} db`;
+      const projHeader = showProj ? '<th style="text-align:right" class="proj-col">Feltételes</th>' : '';
+      const projTotalCell = showProj
+        ? `<td class="num proj-col">${(yearTotal + yearCondTotal).toLocaleString('hu-HU')} Ft</td>`
+        : '';
+      const projAvgCell = showProj
+        ? `<td class="num proj-col">${projMonthlyAvg.toLocaleString('hu-HU')} Ft</td>`
+        : '';
 
       html += `<div class="stats-year-block">
         <div class="stats-year-title">${yearTag}</div>
         <table class="stats-table">
-          <thead><tr><th>Hónap</th><th style="text-align:right">Rekordok</th><th style="text-align:right">Bevétel</th></tr></thead>
+          <thead><tr><th>Hónap</th><th style="text-align:right">Rekordok</th><th style="text-align:right">Bevétel</th>${projHeader}</tr></thead>
           <tbody>
             ${monthRows}
             <tr class="total-row">
               <td>Összesen</td>
               <td class="num">${countLabel}</td>
               <td class="num">${yearTotal.toLocaleString('hu-HU')} Ft</td>
+              ${projTotalCell}
             </tr>
             <tr class="avg-row">
               <td>Havi átlag</td>
               <td class="num">${activeMonthCount} hónap</td>
               <td class="num">${monthlyAvg.toLocaleString('hu-HU')} Ft</td>
+              ${projAvgCell}
             </tr>
           </tbody>
         </table>
@@ -1769,17 +1820,18 @@
     if (sortedYears.length > 0) {
       const chartYears = Object.keys(chartData).map(Number).sort((a,b) => a - b);
       const chartValues = chartYears.map(yr => chartData[yr]);
-      _lastChartData = { labels: chartYears, values: chartValues };
+      const chartProjValues = chartYears.map(yr => chartDataProj[yr]);
+      _lastChartData = { labels: chartYears, values: chartValues, projValues: chartProjValues };
     }
   }
 
   let _lastChartData = null;
   function drawChartIfNeeded() {
     if (!_lastChartData) return;
-    drawRevenueChart('revenueChart', _lastChartData.labels, _lastChartData.values);
+    drawRevenueChart('revenueChart', _lastChartData.labels, _lastChartData.values, _lastChartData.projValues);
   }
 
-  function drawRevenueChart(canvasId, labels, values) {
+  function drawRevenueChart(canvasId, labels, values, projValues) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;
@@ -1795,8 +1847,9 @@
     const chartW = W - padLeft - padRight;
     const chartH = H - padTop - padBottom;
 
-    const maxVal = Math.max(...values, 0);
-    const minVal = Math.min(...values, 0);
+    const allVals = [...values, ...(projValues || [])];
+    const maxVal = Math.max(...allVals, 0);
+    const minVal = Math.min(...allVals, 0);
     const range = (maxVal - minVal) || 1;
 
     // Gridlines
@@ -1843,9 +1896,31 @@
     for (let i = 0; i < barCount; i++) {
       const x = offsetX + barGap * (i + 1) + barW * i;
       const val = values[i];
-      const valY = padTop + chartH - (chartH * (val - minVal) / range);
+      const proj = projValues ? projValues[i] : val;
+      const hasProj = proj > val;
 
-      // Bar
+      // Projected extension bar (light green, drawn first so actual bar overlaps bottom)
+      if (hasProj) {
+        const projY = padTop + chartH - (chartH * (proj - minVal) / range);
+        const projTop = Math.min(projY, zeroY);
+        const projH = Math.abs(projY - zeroY);
+        ctx.fillStyle = 'rgba(0, 113, 114, 0.25)';
+        ctx.beginPath();
+        const rp = Math.min(4, barW / 4, projH / 2);
+        if (projH > 0) {
+          ctx.moveTo(x + rp, projTop);
+          ctx.lineTo(x + barW - rp, projTop);
+          ctx.quadraticCurveTo(x + barW, projTop, x + barW, projTop + rp);
+          ctx.lineTo(x + barW, projTop + projH);
+          ctx.lineTo(x, projTop + projH);
+          ctx.lineTo(x, projTop + rp);
+          ctx.quadraticCurveTo(x, projTop, x + rp, projTop);
+        }
+        ctx.fill();
+      }
+
+      // Actual bar (dark green)
+      const valY = padTop + chartH - (chartH * (val - minVal) / range);
       const barTop = Math.min(valY, zeroY);
       const barH = Math.abs(valY - zeroY);
       const grad = ctx.createLinearGradient(x, barTop, x, barTop + barH);
@@ -1870,7 +1945,15 @@
       }
       ctx.fill();
 
-      // Value on top
+      // Projected value label (gray, above the light green part)
+      if (hasProj) {
+        const projY2 = padTop + chartH - (chartH * (proj - minVal) / range);
+        ctx.fillStyle = '#aaa';
+        ctx.font = 'bold 10px -apple-system, sans-serif';
+        ctx.fillText((proj / 1000000).toFixed(1) + 'M', x + barW / 2, projY2 - 18);
+      }
+
+      // Actual value on top
       ctx.fillStyle = '#333';
       ctx.font = 'bold 11px -apple-system, sans-serif';
       const valText = (val / 1000000).toFixed(1) + 'M';
