@@ -2241,7 +2241,7 @@
     const shortName = (row.short_name || '').trim();
 
     const body = {
-      names: [{ familyName: contactName }],
+      names: [{ familyName: contactName, givenName: '', middleName: '', unstructuredName: '' }],
       phoneNumbers: [{ value: row.mobil, type: 'mobile' }],
     };
     if (nev && shortName) {
