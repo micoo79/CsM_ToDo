@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@flaticon/flaticon-uicons@3.3.1/css/regular/straight.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@flaticon/flaticon-uicons@3.3.1/css/solid/straight.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     :root {
       --c-primary: #025259;
@@ -693,6 +694,7 @@
         <button id="delRow" class="tbtn" title="Törlés" disabled><i class="fi fi-rs-trash"></i></button>
         <button id="hideRow" class="tbtn" title="Elrejtés / Megjelenítés" disabled><i class="fi fi-rs-crossed-eye"></i></button>
         <button id="statsBtn" class="tbtn" title="Statisztika"><i class="fi fi-rs-chart-histogram"></i></button>
+        <button id="googleSyncBtn" class="tbtn" title="Google Névjegyek szinkron"><i class="fi fi-rs-address-book"></i></button>
         <button id="settingsBtn" class="tbtn" title="Beállítások"><i class="fi fi-rs-settings"></i></button>
         <button id="logoutBtn" class="tbtn" title="Kijelentkezés"><i class="fi fi-ss-sign-out-alt"></i></button>
         <span id="kintlevoseg" class="kintlevoseg-label"></span>
@@ -2168,6 +2170,228 @@
       }
     });
     quickToast('Alapertelmezett szinek visszaallitva');
+  });
+
+  // === GOOGLE CONTACTS SYNC ===
+  const GOOGLE_CLIENT_ID = ''; // <-- IDE ÍRD BE a Google OAuth Client ID-t
+  const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/contacts';
+  const PEOPLE_API = 'https://people.googleapis.com/v1';
+
+  let _gToken = null;
+  let _gTokenExp = 0;
+
+  function hasGoogleToken() { return _gToken && Date.now() < _gTokenExp; }
+
+  function googleSignIn() {
+    return new Promise((resolve, reject) => {
+      if (!GOOGLE_CLIENT_ID) {
+        alert('Google OAuth Client ID nincs beállítva!\n\nÁllítsd be a GOOGLE_CLIENT_ID értéket az index2.html fájlban.\n\nGoogle Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client ID (Web application).\nEngedélyezd a People API-t is.');
+        reject(new Error('No client ID'));
+        return;
+      }
+      if (hasGoogleToken()) { resolve(_gToken); return; }
+      try {
+        const client = google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: GOOGLE_SCOPES,
+          callback: (resp) => {
+            if (resp.error) { reject(new Error(resp.error)); return; }
+            _gToken = resp.access_token;
+            _gTokenExp = Date.now() + (resp.expires_in - 60) * 1000;
+            resolve(_gToken);
+          },
+        });
+        client.requestAccessToken();
+      } catch (e) { reject(e); }
+    });
+  }
+
+  async function gFetch(url, opts = {}) {
+    if (!hasGoogleToken()) await googleSignIn();
+    const res = await fetch(url, {
+      ...opts,
+      headers: { 'Authorization': 'Bearer ' + _gToken, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    });
+    if (res.status === 401) {
+      _gToken = null;
+      await googleSignIn();
+      return fetch(url, {
+        ...opts,
+        headers: { 'Authorization': 'Bearer ' + _gToken, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      });
+    }
+    return res;
+  }
+
+  function buildContactName(row) {
+    const nev = (row.nev || '').trim();
+    const shortName = (row.short_name || '').trim();
+    if (nev) return 'x-' + nev;
+    if (shortName) return 'x-' + shortName;
+    return null;
+  }
+
+  function buildContactBody(row) {
+    const phoneNum = extractPhone(row.mobil);
+    if (!phoneNum) return null;
+    const contactName = buildContactName(row);
+    if (!contactName) return null;
+
+    const nev = (row.nev || '').trim();
+    const shortName = (row.short_name || '').trim();
+
+    const body = {
+      names: [{ unstructuredName: contactName }],
+      phoneNumbers: [{ value: row.mobil, type: 'mobile' }],
+    };
+    if (nev && shortName) {
+      body.organizations = [{ name: shortName }];
+    }
+    return body;
+  }
+
+  async function searchGoogleContact(name) {
+    const res = await gFetch(
+      `${PEOPLE_API}/people:searchContacts?query=${encodeURIComponent(name)}&readMask=names,phoneNumbers,organizations&pageSize=10`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.results) return null;
+    for (const r of data.results) {
+      const p = r.person;
+      if (p?.names?.[0]?.unstructuredName === name || p?.names?.[0]?.displayName === name) {
+        return p;
+      }
+    }
+    return null;
+  }
+
+  async function createGoogleContact(body) {
+    const res = await gFetch(`${PEOPLE_API}/people:createContact`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { console.error('Google create error:', await res.text()); return null; }
+    return await res.json();
+  }
+
+  async function updateGoogleContact(resourceName, body, etag) {
+    const updateFields = 'names,phoneNumbers,organizations';
+    const patchBody = { ...body, etag };
+    const res = await gFetch(
+      `${PEOPLE_API}/${resourceName}:updateContact?updatePersonFields=${updateFields}`,
+      { method: 'PATCH', body: JSON.stringify(patchBody) }
+    );
+    if (!res.ok) { console.error('Google update error:', await res.text()); return null; }
+    return await res.json();
+  }
+
+  async function syncOneContact(row) {
+    const phoneNum = extractPhone(row.mobil);
+    if (!phoneNum) return;
+    const body = buildContactBody(row);
+    if (!body) return;
+
+    const contactName = buildContactName(row);
+    try {
+      if (row.google_contact_id) {
+        const getRes = await gFetch(
+          `${PEOPLE_API}/${row.google_contact_id}?personFields=names,phoneNumbers,organizations,metadata`
+        );
+        if (getRes.ok) {
+          const existing = await getRes.json();
+          await updateGoogleContact(row.google_contact_id, body, existing.etag);
+          return;
+        }
+        row.google_contact_id = null;
+      }
+
+      const found = await searchGoogleContact(contactName);
+      if (found) {
+        row.google_contact_id = found.resourceName;
+        await updateGoogleContact(found.resourceName, body, found.etag);
+      } else {
+        const created = await createGoogleContact(body);
+        if (created) {
+          row.google_contact_id = created.resourceName;
+        }
+      }
+      scheduleSave(row);
+    } catch (e) { console.error('Google sync error:', e); }
+  }
+
+  async function bulkSyncContacts(year) {
+    try {
+      await googleSignIn();
+    } catch { return; }
+
+    const targetRows = rows.filter(r => {
+      if (!extractPhone(r.mobil)) return false;
+      if (!buildContactName(r)) return false;
+      const yr = r.date ? new Date(r.date).getFullYear() : null;
+      return yr === year;
+    });
+
+    if (targetRows.length === 0) {
+      quickToast('Nincs szinkronizálható rekord');
+      return;
+    }
+
+    const confirmMsg = `${targetRows.length} db névjegy szinkronizálása a ${year}. évre.\nFolytatod?`;
+    if (!confirm(confirmMsg)) return;
+
+    quickToast('Szinkronizálás...');
+    let ok = 0, fail = 0;
+    for (const r of targetRows) {
+      try {
+        await syncOneContact(r);
+        ok++;
+      } catch (e) {
+        console.error('Sync failed for', r.short_name, e);
+        fail++;
+      }
+      await new Promise(res => setTimeout(res, 300));
+    }
+    quickToast(`Kész: ${ok} sikeres, ${fail} hiba`);
+  }
+
+  // Auto-sync on save when relevant fields change
+  const _origScheduleSave = scheduleSave;
+  const _contactFields = new Set(['mobil', 'nev', 'short_name']);
+  let _pendingContactSync = new Set();
+
+  function scheduleSaveWithContactSync(row) {
+    _origScheduleSave(row);
+    if (row?.id && hasGoogleToken() && extractPhone(row.mobil)) {
+      _pendingContactSync.add(row.id);
+      clearTimeout(scheduleSaveWithContactSync._t);
+      scheduleSaveWithContactSync._t = setTimeout(async () => {
+        for (const id of _pendingContactSync) {
+          const r = rows.find(x => x.id === id);
+          if (r && extractPhone(r.mobil) && buildContactName(r)) {
+            try { await syncOneContact(r); } catch (e) { console.error('Auto-sync error:', e); }
+          }
+        }
+        _pendingContactSync.clear();
+      }, 2000);
+    }
+  }
+  scheduleSave = scheduleSaveWithContactSync;
+
+  // Google sync button
+  const googleSyncBtn = document.getElementById('googleSyncBtn');
+  googleSyncBtn.addEventListener('click', async () => {
+    if (!GOOGLE_CLIENT_ID) {
+      alert('Google OAuth Client ID nincs beállítva!\n\nÁllítsd be a GOOGLE_CLIENT_ID értéket az index2.html fájlban.');
+      return;
+    }
+    try {
+      await googleSignIn();
+      quickToast('Google bejelentkezve');
+      await bulkSyncContacts(2026);
+    } catch (e) {
+      console.error('Google sign-in error:', e);
+    }
   });
 
   // === START ===
