@@ -1119,6 +1119,7 @@
       lastGroup = c.group;
     });
     headers.push({ label: 'Megjegyzés', cls: 'col-note col-text', mobHide: true });
+    headers.push({ label: 'Név', cls: 'col-nev col-text', mobHide: true });
     headers.push({ label: 'Mobil', cls: 'col-mobil col-text' });
     headers.push({ label: '✉', cls: 'col-email' });
     EXTRA_CHK.forEach(c => headers.push({ label: c.label, cls: 'col-chk', mobHide: c.mobHide }));
@@ -1397,6 +1398,26 @@
         noteInp.addEventListener('keydown', e => { if (e.key === 'Enter') noteInp.blur(); });
         tdNote.appendChild(noteInp);
         tr.appendChild(tdNote);
+
+        // === Név ===
+        const tdNev = document.createElement('td');
+        tdNev.className = 'col-nev mob-hide';
+        const nevInp = document.createElement('input');
+        nevInp.className = 'cell-input';
+        nevInp.type = 'text';
+        nevInp.maxLength = 30;
+        nevInp.value = r.nev || '';
+        nevInp.addEventListener('blur', () => {
+          if ((r.nev ?? '') !== nevInp.value) {
+            r.nev = nevInp.value;
+            r.updated_at = nowIso();
+            scheduleSave(r);
+            quickToast('Mentve');
+          }
+        });
+        nevInp.addEventListener('keydown', e => { if (e.key === 'Enter') nevInp.blur(); });
+        tdNev.appendChild(nevInp);
+        tr.appendChild(tdNev);
 
         // === Mobil ===
         const tdMobil = document.createElement('td');
